@@ -17,6 +17,7 @@ dependencies = [
     "nibabel>=5.2",
     "dipy>=1.11",
     "pydantic>=2.8",
+    "fury>=0.12.0",
 ]
 
 [project.optional-dependencies]

@@ -6,7 +6,7 @@ CACHE_ROOT = PROJECT_ROOT / "demo_data" / "cache"
 
 os.environ["DIPY_HOME"] = str(CACHE_ROOT)
 
-from dipy.data import fetch_file_formats  # noqa: E402
+from dipy.data.fetcher import fetch_file_formats  # noqa: E402
 
 EXPECTED_FILES = (
     "cc_m_sub.trk",

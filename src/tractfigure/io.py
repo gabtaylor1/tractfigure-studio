@@ -67,7 +67,7 @@ def load_streamlines_rasmm(
         str(tractogram_path),
         str(reference),
         to_space=Space.RASMM,
-        bbox_valid_check=True,
+        bbox_valid_check=False,
     )
 
     if stateful is False or stateful is None:
