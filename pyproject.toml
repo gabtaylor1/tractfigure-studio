@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tractfigure-studio"
+version = "0.1.0"
+description = "Figure-oriented tractography visualization and registration suite"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "BSD-3-Clause" }
+authors = [
+    { name = "TractFigure Studio Contributors" }
+]
+dependencies = [
+    "numpy>=1.26",
+    "nibabel>=5.2",
+    "dipy>=1.11",
+    "pydantic>=2.8",
+]
+
+[project.optional-dependencies]
+viz = [
+    "pyvista>=0.47",
+    "vtk>=9.3",
+    "trame>=3.10",
+    "trame-vtk>=2.8",
+    "trame-vuetify>=3.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9",
+]
+
+[project.scripts]
+tractfigure-viewer = "tractfigure.viewer:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tractfigure"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests requiring downloaded demonstration data",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

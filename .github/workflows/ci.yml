@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install project
+        run: uv sync --locked --all-extras
+
+      - name: Lint
+        run: .venv/bin/python -m ruff check src tests scripts
+
+      - name: Test
+        run: .venv/bin/python -m pytest -m "not integration"
