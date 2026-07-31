@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import json
+import os
 import re
 from collections.abc import Callable
 from dataclasses import asdict, is_dataclass
@@ -57,6 +59,21 @@ def _inspection_to_dict(inspection: object) -> dict[str, Any]:
         report["formatted_report"] = inspection.format_report()
 
     return report
+
+
+def _portable_output_path(path: Path, recipe_directory: Path) -> str:
+    """Serialize a scene path portably, relative to the saved recipe when possible."""
+
+    path = path.expanduser().resolve()
+    recipe_directory = recipe_directory.expanduser().resolve()
+
+    try:
+        return Path(os.path.relpath(path, recipe_directory)).as_posix()
+    except ValueError:
+        # Windows cannot form a relative path across drive letters. Retain an
+        # explicit POSIX-style absolute path so the saved scene remains usable
+        # on the originating computer and the limitation is visible in JSON.
+        return path.as_posix()
 
 
 class SceneRenderer:
@@ -155,14 +172,9 @@ class SceneRenderer:
             for value, size in zip(supplied, shape, strict=True)
         )
 
-        for axis, (index, size) in enumerate(
-            zip(indices, shape, strict=True)
-        ):
+        for axis, (index, size) in enumerate(zip(indices, shape, strict=True)):
             if not 0 <= index < size:
-                raise ValueError(
-                    f"Slice index {index} is outside axis {axis} "
-                    f"with size {size}"
-                )
+                raise ValueError(f"Slice index {index} is outside axis {axis} with size {size}")
 
         return indices
 
@@ -184,14 +196,9 @@ class SceneRenderer:
         try:
             visibility_field = SLICE_VISIBILITY_FIELDS[slice_name]
         except KeyError as error:
-            raise ValueError(
-                f"Unknown anatomical slice: {slice_name}"
-            ) from error
+            raise ValueError(f"Unknown anatomical slice: {slice_name}") from error
 
-        return bool(
-            image_state.visible
-            and getattr(image_state, visibility_field)
-        )
+        return bool(image_state.visible and getattr(image_state, visibility_field))
 
     def load_reference(self, image_state: ImageLayerState) -> None:
         self._remove_image_actors()
@@ -201,9 +208,7 @@ class SceneRenderer:
         data = np.asarray(image.dataobj, dtype=np.float32)
 
         if data.ndim != 3:
-            raise ValueError(
-                f"Expected a 3D reference image; received {data.shape}"
-            )
+            raise ValueError(f"Expected a 3D reference image; received {data.shape}")
 
         shape = tuple(int(value) for value in data.shape)
         indices = self._actual_slice_indices(image_state, shape)
@@ -231,16 +236,11 @@ class SceneRenderer:
             indices=indices,
         )
 
-        missing_slices = (
-            set(SLICE_VISIBILITY_FIELDS) - set(slice_grids)
-        )
+        missing_slices = set(SLICE_VISIBILITY_FIELDS) - set(slice_grids)
 
         if missing_slices:
             missing_text = ", ".join(sorted(missing_slices))
-            raise RuntimeError(
-                "Anatomical slice conversion omitted: "
-                f"{missing_text}"
-            )
+            raise RuntimeError(f"Anatomical slice conversion omitted: {missing_text}")
 
         for slice_name, grid in slice_grids.items():
             actor = self.plotter.add_mesh(
@@ -317,13 +317,9 @@ class SceneRenderer:
         scene = self._require_scene()
 
         if tract_state.id in self.actors_by_id:
-            raise ValueError(
-                f"Tract layer ID is already loaded: {tract_state.id}"
-            )
+            raise ValueError(f"Tract layer ID is already loaded: {tract_state.id}")
 
-        tract_state.path = Path(
-            tract_state.path
-        ).expanduser().resolve()
+        tract_state.path = Path(tract_state.path).expanduser().resolve()
 
         layer = self.layer_loader(
             tract_state.path,
@@ -331,9 +327,7 @@ class SceneRenderer:
             name=tract_state.name,
         )
 
-        tract_state.coordinate_report = _inspection_to_dict(
-            layer.inspection
-        )
+        tract_state.coordinate_report = _inspection_to_dict(layer.inspection)
 
         line_mesh = streamlines_to_polydata(
             layer.streamlines,
@@ -359,23 +353,15 @@ class SceneRenderer:
         self.layers_by_id.pop(layer_id, None)
         self.line_meshes_by_id.pop(layer_id, None)
 
-        keys_to_remove = [
-            key
-            for key in self.tube_meshes_by_key
-            if key[0] == layer_id
-        ]
+        keys_to_remove = [key for key in self.tube_meshes_by_key if key[0] == layer_id]
 
         for key in keys_to_remove:
             self.tube_meshes_by_key.pop(key, None)
 
-        scene.tracts = [
-            tract for tract in scene.tracts if tract.id != layer_id
-        ]
+        scene.tracts = [tract for tract in scene.tracts if tract.id != layer_id]
 
         if scene.active_layer_id == layer_id:
-            scene.active_layer_id = (
-                scene.tracts[0].id if scene.tracts else None
-            )
+            scene.active_layer_id = scene.tracts[0].id if scene.tracts else None
 
         self._refresh()
 
@@ -437,9 +423,7 @@ class SceneRenderer:
         tract_state = scene.tract_by_id(layer_id)
 
         tract_state.opacity = opacity
-        self.actors_by_id[layer_id].GetProperty().SetOpacity(
-            tract_state.opacity
-        )
+        self.actors_by_id[layer_id].GetProperty().SetOpacity(tract_state.opacity)
         self._refresh()
 
     def set_tract_appearance(
@@ -454,12 +438,8 @@ class SceneRenderer:
         tract_state.color = color
         tract_state.opacity = opacity
 
-        actor_property = self.actors_by_id[
-            layer_id
-        ].GetProperty()
-        actor_property.SetColor(
-            *pv.Color(tract_state.color).float_rgb
-        )
+        actor_property = self.actors_by_id[layer_id].GetProperty()
+        actor_property.SetColor(*pv.Color(tract_state.color).float_rgb)
         actor_property.SetOpacity(tract_state.opacity)
         self._refresh()
 
@@ -487,9 +467,7 @@ class SceneRenderer:
         tract_state = scene.tract_by_id(layer_id)
 
         tract_state.line_width = width
-        self.actors_by_id[layer_id].GetProperty().SetLineWidth(
-            tract_state.line_width
-        )
+        self.actors_by_id[layer_id].GetProperty().SetLineWidth(tract_state.line_width)
         self._refresh()
 
     def set_tube_radius(
@@ -552,8 +530,7 @@ class SceneRenderer:
         except KeyError as error:
             valid = ", ".join(SLICE_VISIBILITY_FIELDS)
             raise ValueError(
-                f"Unknown anatomical slice {slice_name!r}; "
-                f"expected one of: {valid}"
+                f"Unknown anatomical slice {slice_name!r}; expected one of: {valid}"
             ) from error
 
         setattr(
@@ -565,9 +542,7 @@ class SceneRenderer:
         try:
             actor = self.image_actors[slice_name]
         except KeyError as error:
-            raise RuntimeError(
-                f"Anatomical slice actor is unavailable: {slice_name}"
-            ) from error
+            raise RuntimeError(f"Anatomical slice actor is unavailable: {slice_name}") from error
 
         actor.SetVisibility(
             self._slice_actor_visible(
@@ -605,22 +580,12 @@ class SceneRenderer:
         camera = self.plotter.camera
 
         return CameraState(
-            position=tuple(
-                float(value) for value in camera.GetPosition()
-            ),
-            focal_point=tuple(
-                float(value) for value in camera.GetFocalPoint()
-            ),
-            view_up=tuple(
-                float(value) for value in camera.GetViewUp()
-            ),
-            parallel_projection=bool(
-                camera.GetParallelProjection()
-            ),
+            position=tuple(float(value) for value in camera.GetPosition()),
+            focal_point=tuple(float(value) for value in camera.GetFocalPoint()),
+            view_up=tuple(float(value) for value in camera.GetViewUp()),
+            parallel_projection=bool(camera.GetParallelProjection()),
             parallel_scale=float(camera.GetParallelScale()),
-            clipping_range=tuple(
-                float(value) for value in camera.GetClippingRange()
-            ),
+            clipping_range=tuple(float(value) for value in camera.GetClippingRange()),
         )
 
     def apply_camera(
@@ -634,9 +599,7 @@ class SceneRenderer:
         camera.SetPosition(*camera_state.position)
         camera.SetFocalPoint(*camera_state.focal_point)
         camera.SetViewUp(*camera_state.view_up)
-        camera.SetParallelProjection(
-            int(camera_state.parallel_projection)
-        )
+        camera.SetParallelProjection(int(camera_state.parallel_projection))
         camera.SetParallelScale(camera_state.parallel_scale)
         camera.SetClippingRange(*camera_state.clipping_range)
 
@@ -651,17 +614,13 @@ class SceneRenderer:
         scene = self._require_scene()
 
         try:
-            view_method_name, negative = ANATOMICAL_VIEW_CONFIG[
-                (plane, side)
-            ]
+            view_method_name, negative = ANATOMICAL_VIEW_CONFIG[(plane, side)]
         except KeyError as error:
             valid = ", ".join(
-                f"{view_plane}:{view_side}"
-                for view_plane, view_side in ANATOMICAL_VIEW_CONFIG
+                f"{view_plane}:{view_side}" for view_plane, view_side in ANATOMICAL_VIEW_CONFIG
             )
             raise ValueError(
-                f"Unknown anatomical view {plane}:{side}. "
-                f"Valid views: {valid}"
+                f"Unknown anatomical view {plane}:{side}. Valid views: {valid}"
             ) from error
 
         self.plotter.camera.SetParallelProjection(1)
@@ -703,26 +662,16 @@ class SceneRenderer:
         scene = self._require_scene()
 
         current_ids = [tract.id for tract in scene.tracts]
-        initial_ids = [
-            tract.id for tract in initial_scene.tracts
-        ]
+        initial_ids = [tract.id for tract in initial_scene.tracts]
 
         if current_ids != initial_ids:
-            raise ValueError(
-                "Cannot restore settings after tract layers changed"
-            )
+            raise ValueError("Cannot restore settings after tract layers changed")
 
-        current_reference = Path(
-            scene.image.path
-        ).expanduser().resolve()
-        initial_reference = Path(
-            initial_scene.image.path
-        ).expanduser().resolve()
+        current_reference = Path(scene.image.path).expanduser().resolve()
+        initial_reference = Path(initial_scene.image.path).expanduser().resolve()
 
         if current_reference != initial_reference:
-            raise ValueError(
-                "Cannot restore settings after reference image changed"
-            )
+            raise ValueError("Cannot restore settings after reference image changed")
 
         scene.canvas = initial_scene.canvas.model_copy(deep=True)
         self.plotter.window_size = (
@@ -744,12 +693,8 @@ class SceneRenderer:
 
         scene.image.visible = initial_image.visible
         scene.image.opacity = initial_image.opacity
-        scene.image.sagittal_visible = (
-            initial_image.sagittal_visible
-        )
-        scene.image.coronal_visible = (
-            initial_image.coronal_visible
-        )
+        scene.image.sagittal_visible = initial_image.sagittal_visible
+        scene.image.coronal_visible = initial_image.coronal_visible
         scene.image.axial_visible = initial_image.axial_visible
         scene.image.sagittal_index = initial_image.sagittal_index
         scene.image.coronal_index = initial_image.coronal_index
@@ -765,24 +710,18 @@ class SceneRenderer:
                         slice_name,
                     )
                 )
-                actor.GetProperty().SetOpacity(
-                    scene.image.opacity
-                )
+                actor.GetProperty().SetOpacity(scene.image.opacity)
 
         for initial_tract in initial_scene.tracts:
             tract = scene.tract_by_id(initial_tract.id)
-            geometry_changed = (
-                tract.render_mode != initial_tract.render_mode
-                or (
-                    initial_tract.render_mode == "tube"
-                    and (
-                        not np.isclose(
-                            tract.tube_radius,
-                            initial_tract.tube_radius,
-                        )
-                        or tract.tube_sides
-                        != initial_tract.tube_sides
+            geometry_changed = tract.render_mode != initial_tract.render_mode or (
+                initial_tract.render_mode == "tube"
+                and (
+                    not np.isclose(
+                        tract.tube_radius,
+                        initial_tract.tube_radius,
                     )
+                    or tract.tube_sides != initial_tract.tube_sides
                 )
             )
 
@@ -801,9 +740,7 @@ class SceneRenderer:
             actor = self.actors_by_id[tract.id]
             actor.SetVisibility(tract.visible)
             actor_property = actor.GetProperty()
-            actor_property.SetColor(
-                *pv.Color(tract.color).float_rgb
-            )
+            actor_property.SetColor(*pv.Color(tract.color).float_rgb)
             actor_property.SetOpacity(tract.opacity)
             actor_property.SetLineWidth(tract.line_width)
 
@@ -840,9 +777,7 @@ class SceneRenderer:
             widget = renderer.axes_widget
 
             if widget is not None:
-                widgets.append(
-                    (widget, bool(widget.GetEnabled()))
-                )
+                widgets.append((widget, bool(widget.GetEnabled())))
 
         return tuple(widgets)
 
@@ -875,9 +810,7 @@ class SceneRenderer:
             output_image = Image.fromarray(np.asarray(image))
 
             if output_image.size != (int(width), int(height)):
-                background = pv.Color(
-                    self._require_scene().canvas.background
-                ).int_rgb
+                background = pv.Color(self._require_scene().canvas.background).int_rgb
                 fill_color: tuple[int, ...]
 
                 if output_image.mode == "RGBA":
@@ -924,8 +857,20 @@ class SceneRenderer:
         scene.camera = self.capture_camera()
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = scene.model_dump(mode="json")
+        payload["image"]["path"] = _portable_output_path(
+            scene.image.path,
+            output_path.parent,
+        )
+
+        for tract_payload, tract in zip(payload["tracts"], scene.tracts, strict=True):
+            tract_payload["path"] = _portable_output_path(
+                tract.path,
+                output_path.parent,
+            )
+
         output_path.write_text(
-            scene.model_dump_json(indent=2),
+            json.dumps(payload, indent=2) + "\n",
             encoding="utf-8",
         )
         return output_path

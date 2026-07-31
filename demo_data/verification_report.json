@@ -1,0 +1,542 @@
+{
+  "reference": {
+    "path": "demo_data/cache/bundle_file_formats_example/template0.nii.gz",
+    "sha256": "e0197acbfedc9717148386fab46ff12fcad088e31892493114933b0f8a40d773",
+    "shape": [
+      224,
+      224,
+      140
+    ],
+    "voxel_sizes": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "orientation": [
+      "R",
+      "A",
+      "S"
+    ],
+    "affine": [
+      [
+        0.9987833499908447,
+        -0.04141515865921974,
+        -0.026770778000354767,
+        -109.00354766845703
+      ],
+      [
+        0.04449116811156273,
+        0.9909122586250305,
+        0.12693870067596436,
+        -126.78164672851562
+      ],
+      [
+        0.021270304918289185,
+        -0.12797531485557556,
+        0.9915492534637451,
+        -47.033348083496094
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  },
+  "file_formats": [
+    {
+      "path": "demo_data/cache/bundle_file_formats_example/cc_m_sub.trk",
+      "sha256": "30fe97bba81400b47e7be46cd6857913bb0aaedca39043fc4832315b866cdabe",
+      "streamline_count": 6276,
+      "point_count": 205884,
+      "source_space": "RASMM",
+      "source_origin": "NIFTI",
+      "output_space": "RASMM",
+      "coordinate_detection": "embedded format metadata",
+      "detection_confidence": "metadata",
+      "point_fraction_inside_reference": 1.0,
+      "bounding_boxes_overlap": true,
+      "world_bounds_min": [
+        -67.54904174804688,
+        -51.71886444091797,
+        2.61138916015625
+      ],
+      "world_bounds_max": [
+        59.06861114501953,
+        14.138603210449219,
+        76.52840423583984
+      ],
+      "warnings": []
+    },
+    {
+      "path": "demo_data/cache/bundle_file_formats_example/laf_m_sub.tck",
+      "sha256": "9f29dec943641a9b3d8bfed2b34aba57d45ccee452e6f7c20194eb990fa26c9b",
+      "streamline_count": 21337,
+      "point_count": 752354,
+      "source_space": "RASMM",
+      "source_origin": "NIFTI",
+      "output_space": "RASMM",
+      "coordinate_detection": "embedded format metadata",
+      "detection_confidence": "metadata",
+      "point_fraction_inside_reference": 1.0,
+      "bounding_boxes_overlap": true,
+      "world_bounds_min": [
+        -71.36050415039062,
+        -78.56565856933594,
+        -38.9731559753418
+      ],
+      "world_bounds_max": [
+        -6.061314582824707,
+        66.0464859008789,
+        69.08903503417969
+      ],
+      "warnings": []
+    },
+    {
+      "path": "demo_data/cache/bundle_file_formats_example/lpt_m_sub.fib",
+      "sha256": "ac08996cce858805c47d2ad2a1b5be305194876392e1c8f6c8387717b1266a3d",
+      "streamline_count": 2857,
+      "point_count": 99482,
+      "source_space": "LPSMM",
+      "source_origin": "NIFTI",
+      "output_space": "RASMM",
+      "coordinate_detection": "automatic reference-image scoring",
+      "detection_confidence": "high",
+      "point_fraction_inside_reference": 0.9992963551195191,
+      "bounding_boxes_overlap": true,
+      "world_bounds_min": [
+        -68.37837219238281,
+        -61.30869674682617,
+        -57.24382781982422
+      ],
+      "world_bounds_max": [
+        11.826586723327637,
+        21.464452743530273,
+        77.28821563720703
+      ],
+      "warnings": []
+    },
+    {
+      "path": "demo_data/cache/bundle_file_formats_example/raf_m_sub.vtk",
+      "sha256": "63c9b01d1091c29b67b70cb7030f5b083c7339e83a1dd0e121ab6094d8a47c02",
+      "streamline_count": 11885,
+      "point_count": 413231,
+      "source_space": "LPSMM",
+      "source_origin": "TRACKVIS",
+      "output_space": "RASMM",
+      "coordinate_detection": "automatic reference-image scoring",
+      "detection_confidence": "low",
+      "point_fraction_inside_reference": 1.0,
+      "bounding_boxes_overlap": true,
+      "world_bounds_min": [
+        -0.8151341676712036,
+        -78.84733581542969,
+        -36.54080581665039
+      ],
+      "world_bounds_max": [
+        61.375152587890625,
+        66.68008422851562,
+        69.8971939086914
+      ],
+      "warnings": [
+        "The best automatic coordinate interpretation had a small score advantage."
+      ]
+    },
+    {
+      "path": "demo_data/cache/bundle_file_formats_example/rpt_m_sub.dpy",
+      "sha256": "220a3ec69d0c1642540f87e91f2287a7681f64b93206ba75f32e3899d19faa1d",
+      "streamline_count": 2874,
+      "point_count": 99068,
+      "source_space": "RASMM",
+      "source_origin": "NIFTI",
+      "output_space": "RASMM",
+      "coordinate_detection": "automatic reference-image scoring",
+      "detection_confidence": "high",
+      "point_fraction_inside_reference": 0.9995356724673962,
+      "bounding_boxes_overlap": true,
+      "world_bounds_min": [
+        -19.367767333984375,
+        -70.35859680175781,
+        -57.2408332824707
+      ],
+      "world_bounds_max": [
+        59.64409637451172,
+        19.30590057373047,
+        76.7730484008789
+      ],
+      "warnings": []
+    }
+  ],
+  "hcp842": {
+    "anatomical_bundle_count": 80,
+    "tractogram_file_count": 79,
+    "whole_brain": {
+      "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/whole_brain/whole_brain_MNI.trk",
+      "sha256": "fd16342ccb9102bd9607cad3f73d4aa67d24d946671e179207cc166bddb8fe69"
+    },
+    "bundles": [
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AC.trk",
+        "sha256": "976ed73d2839b475ebc1d87758d30408a642d6d35c1ebcfca2aa0f040299b52d"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AF_L.trk",
+        "sha256": "2d89adfd7ef9b19419d08dcc4ad90ed335c0c83880be9bdf74a12b62af09bc42"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AF_R.trk",
+        "sha256": "a828d3c564937aa687645cbca9ebd9d588690cfe7c6d95be9eaa371671a28bcb"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AR_L.trk",
+        "sha256": "cd537e77206ea11d2025be8a9f0320ce3f2cd4d2e0b687fa30368950575ffcaa"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AR_R.trk",
+        "sha256": "fbb26e7598a3383c7dbf931f12878942c1fb66e97a658338813126211acd0208"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AST_L.trk",
+        "sha256": "da2fd4517513057ed6ec5e9bb6fdbd7dba972b9b7e5ad6b876461b482372fbb0"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/AST_R.trk",
+        "sha256": "fabaaac4bcbf381a7e241e55b9cdd7df3d19844a583fe37bdaaf570fa3e41a6a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_L.trk",
+        "sha256": "b9272c35000b54d1c74036eee7bf00dd75df4177232c0c9f8e22af268cd3ac8e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_R.trk",
+        "sha256": "fbf591ffdbc7bb42c20297d765c53e6ed31f7308d3b246b351bee4a1baa72a45"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CB_L.trk",
+        "sha256": "c0d8cbe76cabb4ed6b54b20731f9b13d73c082e97a9787bb9fcbcd8a23bfa302"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CB_R.trk",
+        "sha256": "8469a3874587530896e5989219f12f8414f5abd0283fced67d147a688fd0a5b4"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CC.trk",
+        "sha256": "ecfe2bb8aaee7f3551a3b35b7c73ea91346d38250a13147ad33ff9dc214d07f7"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CC_ForcepsMajor.trk",
+        "sha256": "5b64d1b1d284ef39287f471c4737206f031a7a1ddb9126f1c293239d10dea15a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CC_ForcepsMinor.trk",
+        "sha256": "2b3681b7edd94397eaf413d75319c685bf4c6293546b4fb078a26151900b6927"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CCMid.trk",
+        "sha256": "99665ccceb4951e6a8862722b0e08f81fa36cf3f3ede65d2c4063ecf45a364eb"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_L.trk",
+        "sha256": "190d7801368abe30f812b95fecf75c2ac9612b2b60bd6930db84aabf83d00323"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_R.trk",
+        "sha256": "6b238ab0a951468ff02b4b9d4668ad25f14cfcc29c4e98e6a3aaaac6bb6fc27e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIII_L.trk",
+        "sha256": "34f9470c085d5ab8abf0afdf9eff65d8683aac03a4065997d3c3dc73c5d1f619"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIII_R.trk",
+        "sha256": "7178bef167f2e1123752059f46d0b1f48374566ef4aef65316e25178abb74518"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIV_L.trk",
+        "sha256": "bbfea724dc5adeb238ca760f8a3be6658d559a122312eb6a751d32044614d063"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIV_R.trk",
+        "sha256": "a0671f791a64f9ec51c0839383867b5e294e1ced945e200eee0685f64bebdc50"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_L.trk",
+        "sha256": "a254a570eb9ecda960cc4da1f298d696006ecbd00fc70f64bd9edefe39d482b3"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_R.trk",
+        "sha256": "3311843a36fce2fb5a678ae11174713d107dd0a9002b63e303231157950846b5"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_L.trk",
+        "sha256": "4b0e52134d72ce240f18bf70810794bc7d8cee22d29bc576f0cf2147193ddcb1"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_R.trk",
+        "sha256": "f68f8786c6b0428750275ca15a8193761f33c1ec877491c64f243baae0440dae"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVIII_L.trk",
+        "sha256": "12ec4b391cf78167409fd5e9665143f0808fa215bf5574b333d55855920f2507"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVIII_R.trk",
+        "sha256": "15aabaaef53ee5989022c577cbadfecde2d26ed5a5a5b6692c7ea5d8cd5b8dcc"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_L.trk",
+        "sha256": "25752484f9718a8d3ae800b397c2148bee8e73684166403df7de8073fc4eb644"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_R.trk",
+        "sha256": "445a2b3c3f328a287c4c63f03c2f87f9cb1d604282594599121c27d020ba7878"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CST_L.trk",
+        "sha256": "5cf493a4a55de70a90c09e7d5c27eda9ec1fbb3a946336c133296c9248713fa5"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CST_R.trk",
+        "sha256": "9efdbf923f7d837a5895fc133b8a14f02dfa7209952368329bbd8f5e3dd14fc7"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_L.trk",
+        "sha256": "8f61ae6fd8efc65e02e17ebb411c701ba5394b03bf49ef849aa75159e0146202"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_R.trk",
+        "sha256": "11ee37166c92aaaa1fb6fe8de060fc8e19a1ed0452a2f57d948a5b6cc4eac633"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CTT_L.trk",
+        "sha256": "4976fb1a8a49262cde55649a8373da1e2f136a9cc94955ed31f1fb3dfa138cb9"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CTT_R.trk",
+        "sha256": "6aab2c82cff410138736a38b2a3a099faf40fdd29a83990f2005d609212ba321"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/DLF_L.trk",
+        "sha256": "eb53d06a9e790d8b6c0e05c180953dd463afc64a720124de3d3963601f2a7e10"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/DLF_R.trk",
+        "sha256": "5e500cb58ed3e77f99cb5fd00646cb96aba9a1eb3d1dcf06236394db731cff37"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/EMC_L.trk",
+        "sha256": "ac6ec345675bce3d6621382e28d4cae1193d5f7e717c06a594f9985f23595ee8"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/EMC_R.trk",
+        "sha256": "c0573567076f5ab18e01fabb0eab31dfec21d6e419168775bdb16d7eb18c47ee"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/F_L_R.trk",
+        "sha256": "1478aa863b81d35f9302499773582012bc9ca0c5ea62e50b0eeee29e83070f60"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/FPT_L.trk",
+        "sha256": "73b1eb7f3f908887ee21163c1dc7d12d06d74ab852be2c63b53aba2b910c744a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/FPT_R.trk",
+        "sha256": "bbbee6a47075a0afb9fe0399183a48fb0146e07b1bdfd04268565b1e15e5f16c"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ICP_L.trk",
+        "sha256": "adc7e53375c9f0dca8c0dfdd630e3198c3687fd4fb6f00bf4da82db0aeddd079"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ICP_R.trk",
+        "sha256": "68c8599a1a7349e4b43b77430171d79cb7a3085189063cb3627c225058368223"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/IF0F_R.trk",
+        "sha256": "e4ab020edf3788fcb136decd1d2194ded1021b16f7ea0bfa71a8539477cb17cc"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/IFOF_L.trk",
+        "sha256": "27fa692c919c80b136738a7404f8ed6cfd854dcae8f947b2a1a7d86025d5c7fe"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/IFOF_R.trk",
+        "sha256": "e4ab020edf3788fcb136decd1d2194ded1021b16f7ea0bfa71a8539477cb17cc"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ILF_L.trk",
+        "sha256": "cad1c750be419b9cfdb7261a250ba394ab90c46084ce20a9807ca12f2341a4e1"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ILF_R.trk",
+        "sha256": "ea198725f17b4e08854053ad51d4fc150d2a3a0f4c5c2978c666306191acff21"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/LL_L.trk",
+        "sha256": "c9082568c95a85084ff72d3549e84b00b8ba10d365d27934e2385189faeb50e1"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/LL_R.trk",
+        "sha256": "abe982bbc93af7c309ee4aa19e714e43ffac36d1fce4428b1a651f93ddf58da1"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MCP.trk",
+        "sha256": "7e330f6a91ca0ecffb0c9235ee4a539b67e9bcf12519e5c1adb5764798e2f020"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_L.trk",
+        "sha256": "cf6719840a256b2282a185fbff028cbe257bafa9c9c06250f61e8a9f54cf00a8"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_R.trk",
+        "sha256": "247245f58d2c7075f0d79c438317abfff8ce52c2889a602542b0306a99035856"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ML_L.trk",
+        "sha256": "135b410ee9e3225f041f3934ddf99c0ca15132d30e4ff19959ed608a7b5e44e4"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ML_R.trk",
+        "sha256": "3ac91eaf9d18fc68a82128d9cc260f0f153fd5b67a318f70bcee29ec17b8faaa"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_L.trk",
+        "sha256": "8d50a9915e501f34a4c30e893261be2f4a4927c215a51b5aee54754a5be6981e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_R.trk",
+        "sha256": "8522c31532941fbdc8d10a088e80208fa6b7464c1a8d18dda554d5f7da8bb1a5"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/OPT_L.trk",
+        "sha256": "e5eb710fe15bbfe0244e1f1fc77bf518414f2e0946505280d771af6dc8cf85cc"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/OPT_R.trk",
+        "sha256": "c850c1cd7d45e773d3be250054336813461f8001234ad2100ecf553e0e5b8ec0"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/OR_L.trk",
+        "sha256": "0a85727203c3e1c68a5dca82c5af2cdbcacaec8dd4af101a7f7648cc7be34e98"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/OR_R.trk",
+        "sha256": "7d8f761b86f24eb47f6e78b2fbf471ee258bee588ae5e92e389bb029ce1789c7"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/PC.trk",
+        "sha256": "045cc7295f964993c97cd2a7a1b53e3fb26d36fdea06c4979936027d73c6c609"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/PPT_L.trk",
+        "sha256": "3d0dec804b180cee01b3995979d4e67973f586286a9eaf7dfb3b505bb93f980d"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/PPT_R.trk",
+        "sha256": "09c9b91730e3beab2405e683f9faf340671944f85c76090f24a7e32949cd655a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/RST_L.trk",
+        "sha256": "4986ba766fddf3a53d710d633b29167e9e3ee334cf4daafab8c02c57457e8c21"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/RST_R.trk",
+        "sha256": "0feb47327d47c5c070ff1cf980021911ddb04459abfd24eb95305e9d208e5f79"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/SCP.trk",
+        "sha256": "bb6add02911b21b59919c19e513382d7639029f8d7c34c350c1f81d2d5f7617a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/SLF_L.trk",
+        "sha256": "eac6a875cecfd5afe0f4e49e9d29a9993af7ee9a7a30809bdfa76b652bded43a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/SLF_R.trk",
+        "sha256": "074ae346433b20d72b25c220721037ad95410dc9119348e81ff990e09e9ee0ef"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/STT_L.trk",
+        "sha256": "b8f69f2c3eac9826cfad0862d3a6ba3e0651978125b66f2b2f3a1a32dfd98dfb"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/STT_R.trk",
+        "sha256": "0f9bd99d2588f74b07b9c78c17018d2c1a5ef6e0c9de581f116f5e3a2534856a"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/TPT_L.trk",
+        "sha256": "0ceb00cfac78178595844e9b0528c294122dd3733ce3998e7b15c6360c2156da"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/TPT_R.trk",
+        "sha256": "75fb21731a72f34cfc5cec87e1adc2f4c480cc5a235432067587ee81bbc0c1de"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/UF_L.trk",
+        "sha256": "914cbd67a0ec878db67051c0da35cdc46f641b2c0233377d12b143f3ba7d564e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/UF_R.trk",
+        "sha256": "1b3c901395d636a7ef4255ea16e40a248e56da8ad594512d8533c5b1d10413e8"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/V.trk",
+        "sha256": "9a9e20ddac00d39a73c229df8ebd64add33ee4c07b02a39309132b676b849e5e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/VOF_L.trk",
+        "sha256": "67878a2704b5bb473f22f183b9f7481a40a966167e0e2674d6c8c00b24b1f445"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/VOF_R.trk",
+        "sha256": "c9df14b789e85bf3936bb03e90131ba83daabb50866d77ad2a5f60578c0f2b4d"
+      }
+    ]
+  },
+  "mni2009a_t1": {
+    "path": "demo_data/cache/mni_icbm152_2009a_t1.nii.gz",
+    "sha256": "3dc1824dbb4db94b844e2e51e8373279f40c0d2ca66510a3f239437a891acd6d",
+    "shape": [
+      197,
+      233,
+      189
+    ],
+    "voxel_sizes": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "orientation": [
+      "R",
+      "A",
+      "S"
+    ],
+    "affine": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        -98.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        -134.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        -72.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  }
+}

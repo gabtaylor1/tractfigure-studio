@@ -1,4 +1,5 @@
 .venv/
+.venv-clean/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -8,7 +9,6 @@ build/
 *.egg-info/
 
 demo_data/cache/
+demo_data/registration/
 outputs/
-*.png
-*.tif
-*.tiff
+outputs-clean/

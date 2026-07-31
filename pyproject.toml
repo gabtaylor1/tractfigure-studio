@@ -7,34 +7,34 @@ name = "tractfigure-studio"
 version = "0.1.0"
 description = "Figure-oriented tractography visualization and registration suite"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.12,<3.13"
 license = { text = "BSD-3-Clause" }
-authors = [
-    { name = "TractFigure Studio Contributors" }
-]
+authors = [{ name = "TractFigure Studio Contributors" }]
 dependencies = [
-    "numpy>=1.26",
-    "nibabel>=5.2",
-    "dipy>=1.11",
-    "pydantic>=2.8",
-    "fury>=0.12.0",
+    "dipy>=1.11,<1.13",
+    "fury>=0.12,<0.14",
+    "nibabel>=5.2,<6",
+    "numpy>=1.26,<3",
+    "pydantic>=2.8,<3",
+    "scipy>=1.13,<2",
 ]
 
 [project.optional-dependencies]
 viz = [
-    "pyvista>=0.47",
-    "vtk>=9.3",
-    "trame>=3.10",
-    "trame-vtk>=2.8",
-    "trame-vuetify>=3.0",
+    "matplotlib>=3.9,<4",
+    "pillow>=10,<13",
+    "pyvista>=0.47,<0.49",
+    "trame>=3.10,<4",
+    "trame-vtk>=2.8,<3",
+    "trame-vuetify>=3,<4",
+    "vtk>=9.3,<9.4",
 ]
 dev = [
-    "pytest>=8.0",
-    "ruff>=0.9",
+    "pytest>=8,<10",
+    "ruff>=0.9,<1",
 ]
 
 [project.scripts]
-tractfigure-viewer = "tractfigure.viewer:main"
 tractfigure-gui = "tractfigure.gui.app_trame_v1_20260730:main"
 
 [tool.hatch.build.targets.wheel]
@@ -44,10 +44,11 @@ packages = ["src/tractfigure"]
 testpaths = ["tests"]
 markers = [
     "integration: tests requiring downloaded demonstration data",
+    "registration: registration optimization tests",
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]

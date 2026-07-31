@@ -1,0 +1,15 @@
+[dataset.file_formats]
+doi = "10.5281/zenodo.3352379"
+license = "CC-BY-4.0"
+space = "dataset-reference"
+reference = "template0.nii.gz"
+
+[dataset.hcp842]
+doi = "10.6084/m9.figshare.7375883"
+license = "CC-BY-4.0"
+space = "ICBM2009a"
+
+[dataset.mni2009a]
+license = "MNI template license"
+space = "ICBM2009a"
+contrast = "T1"

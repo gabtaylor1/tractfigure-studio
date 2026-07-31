@@ -195,9 +195,7 @@ def unique_layer_names(paths: list[Path]) -> list[str]:
         occurrences[base] = occurrences.get(base, 0) + 1
         count = occurrences[base]
 
-        names.append(
-            base if count == 1 else f"{base} ({count})"
-        )
+        names.append(base if count == 1 else f"{base} ({count})")
 
     return names
 
@@ -207,24 +205,17 @@ def scene_from_inputs(
     tractogram_paths: list[Path],
 ) -> SceneState:
     reference_path = reference_path.expanduser().resolve()
-    tractogram_paths = [
-        path.expanduser().resolve()
-        for path in tractogram_paths
-    ]
+    tractogram_paths = [path.expanduser().resolve() for path in tractogram_paths]
 
     if not reference_path.is_file():
-        raise FileNotFoundError(
-            f"Reference image does not exist: {reference_path}"
-        )
+        raise FileNotFoundError(f"Reference image does not exist: {reference_path}")
 
     if not tractogram_paths:
         raise ValueError("At least one tractogram is required")
 
     for path in tractogram_paths:
         if not path.is_file():
-            raise FileNotFoundError(
-                f"Tractogram does not exist: {path}"
-            )
+            raise FileNotFoundError(f"Tractogram does not exist: {path}")
 
     colors = cycle(DEFAULT_COLORS)
     names = unique_layer_names(tractogram_paths)
@@ -260,15 +251,11 @@ def resolve_recipe_paths(
     resolved = scene.model_copy(deep=True)
 
     if not resolved.image.path.is_absolute():
-        resolved.image.path = (
-            recipe_directory / resolved.image.path
-        ).resolve()
+        resolved.image.path = (recipe_directory / resolved.image.path).resolve()
 
     for tract in resolved.tracts:
         if not tract.path.is_absolute():
-            tract.path = (
-                recipe_directory / tract.path
-            ).resolve()
+            tract.path = (recipe_directory / tract.path).resolve()
 
     return resolved
 
@@ -277,13 +264,9 @@ def load_recipe(recipe_path: Path) -> SceneState:
     recipe_path = recipe_path.expanduser().resolve()
 
     if not recipe_path.is_file():
-        raise FileNotFoundError(
-            f"Scene recipe does not exist: {recipe_path}"
-        )
+        raise FileNotFoundError(f"Scene recipe does not exist: {recipe_path}")
 
-    scene = SceneState.model_validate_json(
-        recipe_path.read_text(encoding="utf-8")
-    )
+    scene = SceneState.model_validate_json(recipe_path.read_text(encoding="utf-8"))
     return resolve_recipe_paths(scene, recipe_path)
 
 
@@ -328,30 +311,22 @@ class TractFigureController:
         self.state.slice_opacity = self.scene.image.opacity
         self.state.scene_background = self.scene.canvas.background
 
-        for slice_name, field_name in (
-            SLICE_VISIBILITY_FIELDS.items()
-        ):
+        for slice_name, field_name in SLICE_VISIBILITY_FIELDS.items():
             setattr(
                 self.state,
                 f"{slice_name}_visible",
                 getattr(self.scene.image, field_name),
             )
 
-        self.state.sagittal_index = (
-            self.scene.image.sagittal_index
-        )
-        self.state.coronal_index = (
-            self.scene.image.coronal_index
-        )
+        self.state.sagittal_index = self.scene.image.sagittal_index
+        self.state.coronal_index = self.scene.image.coronal_index
         self.state.axial_index = self.scene.image.axial_index
 
         self.state.sagittal_max = image_shape[0] - 1
         self.state.coronal_max = image_shape[1] - 1
         self.state.axial_max = image_shape[2] - 1
 
-        self.state.all_tracts_visible = all(
-            tract.visible for tract in self.scene.tracts
-        )
+        self.state.all_tracts_visible = all(tract.visible for tract in self.scene.tracts)
 
         for index, tract in enumerate(self.scene.tracts):
             visibility_key = f"layer_visible_{index}"
@@ -384,31 +359,11 @@ class TractFigureController:
         self._synchronize_numeric_inputs()
 
     def _register_callbacks(self) -> None:
-        self.callbacks.append(
-            self.state.change("all_tracts_visible")(
-                self._on_all_tracts_visible
-            )
-        )
-        self.callbacks.append(
-            self.state.change("active_layer_id")(
-                self._on_active_layer_changed
-            )
-        )
-        self.callbacks.append(
-            self.state.change("reference_visible")(
-                self._on_reference_visible
-            )
-        )
-        self.callbacks.append(
-            self.state.change("slice_opacity")(
-                self._on_slice_opacity
-            )
-        )
-        self.callbacks.append(
-            self.state.change("scene_background")(
-                self._on_scene_background
-            )
-        )
+        self.callbacks.append(self.state.change("all_tracts_visible")(self._on_all_tracts_visible))
+        self.callbacks.append(self.state.change("active_layer_id")(self._on_active_layer_changed))
+        self.callbacks.append(self.state.change("reference_visible")(self._on_reference_visible))
+        self.callbacks.append(self.state.change("slice_opacity")(self._on_slice_opacity))
+        self.callbacks.append(self.state.change("scene_background")(self._on_scene_background))
 
         for slice_name in SLICE_VISIBILITY_FIELDS:
             state_key = f"{slice_name}_visible"
@@ -416,20 +371,14 @@ class TractFigureController:
                 slice_name,
                 state_key,
             )
-            self.callbacks.append(
-                self.state.change(state_key)(callback)
-            )
+            self.callbacks.append(self.state.change(state_key)(callback))
 
         for key in (
             "sagittal_index",
             "coronal_index",
             "axial_index",
         ):
-            self.callbacks.append(
-                self.state.change(key)(
-                    self._on_slice_indices
-                )
-            )
+            self.callbacks.append(self.state.change(key)(self._on_slice_indices))
 
         for key, callback in (
             ("active_color", self._on_active_color),
@@ -450,9 +399,7 @@ class TractFigureController:
                 self._on_active_tube_sides,
             ),
         ):
-            self.callbacks.append(
-                self.state.change(key)(callback)
-            )
+            self.callbacks.append(self.state.change(key)(callback))
 
         for tract in self.scene.tracts:
             key = self.visibility_keys[tract.id]
@@ -460,15 +407,11 @@ class TractFigureController:
                 tract.id,
                 key,
             )
-            self.callbacks.append(
-                self.state.change(key)(callback)
-            )
+            self.callbacks.append(self.state.change(key)(callback))
 
     def _register_controller_actions(self) -> None:
         self.ctrl.reset_camera = self.reset_camera
-        self.ctrl.reset_active_tract_settings = (
-            self.reset_active_tract_settings
-        )
+        self.ctrl.reset_active_tract_settings = self.reset_active_tract_settings
         self.ctrl.reset_all_settings = self.reset_all_settings
         self.ctrl.view_perspective = self.view_perspective
         self.ctrl.view_sagittal = self.view_sagittal
@@ -503,9 +446,7 @@ class TractFigureController:
                 value,
             )
 
-            self.state.all_tracts_visible = all(
-                item.visible for item in self.scene.tracts
-            )
+            self.state.all_tracts_visible = all(item.visible for item in self.scene.tracts)
             self._refresh_layer_items()
             self.update_view()
 
@@ -573,9 +514,7 @@ class TractFigureController:
             self.state.active_tube_sides = 8
             self.state.active_warnings_text = ""
             self.state.active_warnings_visible = False
-            self._synchronize_numeric_inputs(
-                ACTIVE_NUMERIC_MODELS
-            )
+            self._synchronize_numeric_inputs(ACTIVE_NUMERIC_MODELS)
             return
 
         self.state.active_color = color_with_alpha(
@@ -591,14 +530,10 @@ class TractFigureController:
             "warnings",
             (),
         )
-        self.state.active_warnings_text = "\n".join(
-            str(warning) for warning in warnings
-        )
+        self.state.active_warnings_text = "\n".join(str(warning) for warning in warnings)
         self.state.active_warnings_visible = bool(warnings)
 
-        self._synchronize_numeric_inputs(
-            ACTIVE_NUMERIC_MODELS
-        )
+        self._synchronize_numeric_inputs(ACTIVE_NUMERIC_MODELS)
 
     def _synchronize_state_from_scene(self) -> None:
         self._state_sync_in_progress = True
@@ -606,29 +541,19 @@ class TractFigureController:
         try:
             self.state.reference_visible = self.scene.image.visible
             self.state.slice_opacity = self.scene.image.opacity
-            self.state.scene_background = (
-                self.scene.canvas.background
-            )
+            self.state.scene_background = self.scene.canvas.background
 
-            for slice_name, field_name in (
-                SLICE_VISIBILITY_FIELDS.items()
-            ):
+            for slice_name, field_name in SLICE_VISIBILITY_FIELDS.items():
                 setattr(
                     self.state,
                     f"{slice_name}_visible",
                     getattr(self.scene.image, field_name),
                 )
 
-            self.state.sagittal_index = (
-                self.scene.image.sagittal_index
-            )
-            self.state.coronal_index = (
-                self.scene.image.coronal_index
-            )
+            self.state.sagittal_index = self.scene.image.sagittal_index
+            self.state.coronal_index = self.scene.image.coronal_index
             self.state.axial_index = self.scene.image.axial_index
-            self.state.all_tracts_visible = all(
-                tract.visible for tract in self.scene.tracts
-            )
+            self.state.all_tracts_visible = all(tract.visible for tract in self.scene.tracts)
 
             for tract in self.scene.tracts:
                 setattr(
@@ -642,9 +567,7 @@ class TractFigureController:
                     tract.color,
                 )
 
-            self.state.active_layer_id = (
-                self.scene.active_layer_id
-            )
+            self.state.active_layer_id = self.scene.active_layer_id
             self._refresh_layer_items()
             self._populate_active_controls()
             self._synchronize_numeric_inputs()
@@ -696,14 +619,10 @@ class TractFigureController:
         self,
         key: str,
     ) -> tuple[float, float, bool]:
-        minimum, maximum_source, integer = (
-            NUMERIC_CONTROL_CONFIG[key]
-        )
+        minimum, maximum_source, integer = NUMERIC_CONTROL_CONFIG[key]
 
         if isinstance(maximum_source, str):
-            maximum = float(
-                getattr(self.state, maximum_source)
-            )
+            maximum = float(getattr(self.state, maximum_source))
         else:
             maximum = float(maximum_source)
 
@@ -730,11 +649,7 @@ class TractFigureController:
         self,
         models: tuple[str, ...] | None = None,
     ) -> None:
-        selected = (
-            tuple(NUMERIC_CONTROL_CONFIG)
-            if models is None
-            else models
-        )
+        selected = tuple(NUMERIC_CONTROL_CONFIG) if models is None else models
 
         for key in selected:
             self._synchronize_numeric_input(key)
@@ -790,27 +705,22 @@ class TractFigureController:
         if numeric < minimum or numeric > maximum:
             self._restore_numeric_input(
                 key,
-                f"{label} must be between {minimum:g} and "
-                f"{maximum:g}; previous value retained",
+                f"{label} must be between {minimum:g} and {maximum:g}; previous value retained",
             )
             return
 
         if integer and not numeric.is_integer():
             self._restore_numeric_input(
                 key,
-                f"{label} must be a whole number; "
-                "previous value retained",
+                f"{label} must be a whole number; previous value retained",
             )
             return
 
-        normalized: float | int = (
-            int(numeric) if integer else numeric
-        )
+        normalized: float | int = int(numeric) if integer else numeric
         setattr(self.state, key, normalized)
         self._synchronize_numeric_input(key, normalized)
         self.state.status_message = (
-            f"{label} set to "
-            f"{format_numeric_value(normalized, integer=integer)}"
+            f"{label} set to {format_numeric_value(normalized, integer=integer)}"
         )
 
     def _normalize_numeric_state(
@@ -834,10 +744,7 @@ class TractFigureController:
                 key,
                 current_value,
             )
-            self.state.status_message = (
-                f"{key.replace('_', ' ').capitalize()} "
-                "must be numeric"
-            )
+            self.state.status_message = f"{key.replace('_', ' ').capitalize()} must be numeric"
             return None
 
         if not isfinite(numeric):
@@ -849,10 +756,7 @@ class TractFigureController:
                 key,
                 current_value,
             )
-            self.state.status_message = (
-                f"{key.replace('_', ' ').capitalize()} "
-                "must be finite"
-            )
+            self.state.status_message = f"{key.replace('_', ' ').capitalize()} must be finite"
             return None
 
         bounded = max(float(minimum), min(float(maximum), numeric))
@@ -886,9 +790,7 @@ class TractFigureController:
 
         target = bool(all_tracts_visible)
 
-        if target == all(
-            tract.visible for tract in self.scene.tracts
-        ):
+        if target == all(tract.visible for tract in self.scene.tracts):
             return
 
         self.renderer.set_all_tracts_visible(target)
@@ -972,9 +874,7 @@ class TractFigureController:
             return
 
         try:
-            color, _opacity = split_color_and_alpha(
-                scene_background
-            )
+            color, _opacity = split_color_and_alpha(scene_background)
         except ValueError as error:
             self._assign_state_without_callback(
                 "scene_background",
@@ -991,9 +891,7 @@ class TractFigureController:
             "scene_background",
             normalized,
         )
-        self.state.status_message = (
-            f"Background changed to {normalized}"
-        )
+        self.state.status_message = f"Background changed to {normalized}"
         self.update_view()
 
     def _on_slice_indices(
@@ -1068,14 +966,9 @@ class TractFigureController:
             )
             return
 
-        target_opacity = (
-            tract.opacity if opacity is None else opacity
-        )
+        target_opacity = tract.opacity if opacity is None else opacity
 
-        if (
-            tract.color == color
-            and abs(tract.opacity - target_opacity) < 1e-9
-        ):
+        if tract.color == color and abs(tract.opacity - target_opacity) < 1e-9:
             return
 
         self.renderer.set_tract_appearance(
@@ -1101,10 +994,7 @@ class TractFigureController:
 
         tract = self._active_tract()
 
-        if (
-            tract is None
-            or tract.render_mode == active_render_mode
-        ):
+        if tract is None or tract.render_mode == active_render_mode:
             return
 
         self.renderer.set_render_mode(
@@ -1229,9 +1119,7 @@ class TractFigureController:
         self._last_anatomical_plane = plane
         self._anatomical_side[plane] = side
         self._synchronize_camera_to_view()
-        self.state.status_message = (
-            f"{plane.capitalize()} view: {side.capitalize()}"
-        )
+        self.state.status_message = f"{plane.capitalize()} view: {side.capitalize()}"
 
     def view_sagittal(self) -> None:
         self._set_anatomical_view("sagittal")
@@ -1307,15 +1195,11 @@ class TractFigureController:
             )
 
         self._synchronize_state_from_scene()
-        self.state.status_message = (
-            f"Reset tract settings: {tract.name}"
-        )
+        self.state.status_message = f"Reset tract settings: {tract.name}"
         self.update_view()
 
     def reset_all_settings(self) -> None:
-        self.scene = self.renderer.restore_scene_settings(
-            self.initial_scene
-        )
+        self.scene = self.renderer.restore_scene_settings(self.initial_scene)
         self._last_anatomical_plane = None
         self._anatomical_side.clear()
         self._synchronize_state_from_scene()
@@ -1324,9 +1208,7 @@ class TractFigureController:
         self.state.status_message = "All settings reset"
 
     def _timestamp(self) -> str:
-        return datetime.now().strftime(
-            "%Y%m%d_%H%M%S_%f"
-        )
+        return datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
     def _flush_state(self) -> None:
         flush = getattr(self.state, "flush", None)
@@ -1339,9 +1221,7 @@ class TractFigureController:
         message: str,
         saved_path: Path,
     ) -> None:
-        self.state.status_message = (
-            f"{message}: {saved_path.name}"
-        )
+        self.state.status_message = f"{message}: {saved_path.name}"
         self.state.export_path = str(saved_path)
         self._flush_state()
 
@@ -1350,19 +1230,13 @@ class TractFigureController:
         action: str,
         error: Exception,
     ) -> None:
-        self.state.status_message = (
-            f"{action} failed: "
-            f"{type(error).__name__}: {error}"
-        )
+        self.state.status_message = f"{action} failed: {type(error).__name__}: {error}"
         self.state.export_path = ""
         self._flush_state()
 
     def save_scene(self) -> Path:
         try:
-            output_path = (
-                self.output_directory
-                / f"tractfigure_scene_{self._timestamp()}.json"
-            )
+            output_path = self.output_directory / f"tractfigure_scene_{self._timestamp()}.json"
             saved_path = self.renderer.save_scene(output_path)
         except Exception as error:
             self._set_output_failure("Save scene", error)
@@ -1388,10 +1262,7 @@ class TractFigureController:
 
     def export_png(self) -> Path:
         try:
-            output_path = (
-                self.output_directory
-                / f"tractfigure_render_{self._timestamp()}.png"
-            )
+            output_path = self.output_directory / f"tractfigure_render_{self._timestamp()}.png"
 
             self.scene.camera = self.renderer.capture_camera()
 
@@ -1455,9 +1326,7 @@ def install_viewer_controls(
                     self.on_rendering_mode_change,
                 ),
             ):
-                controller.callbacks.append(
-                    server.state.change(state_key)(callback)
-                )
+                controller.callbacks.append(server.state.change(state_key)(callback))
 
             pv_divider(vertical=True, classes="mr-1")
             pv_button(
@@ -1495,18 +1364,12 @@ def install_viewer_controls(
             pv_checkbox(
                 model=(self.OUTLINE, False),
                 icons=("mdi-cube", "mdi-cube-off"),
-                tooltip=(
-                    "Toggle bounding box "
-                    f"({{{{ {self.OUTLINE} ? 'on' : 'off' }}}})"
-                ),
+                tooltip=(f"Toggle bounding box ({{{{ {self.OUTLINE} ? 'on' : 'off' }}}})"),
             )
             pv_checkbox(
                 model=(self.GRID, False),
                 icons=("mdi-ruler-square", "mdi-ruler-square"),
-                tooltip=(
-                    "Toggle ruler "
-                    f"({{{{ {self.GRID} ? 'on' : 'off' }}}})"
-                ),
+                tooltip=(f"Toggle ruler ({{{{ {self.GRID} ? 'on' : 'off' }}}})"),
             )
 
             if mode == "trame":
@@ -1554,14 +1417,10 @@ def build_ui(
     install_viewer_controls(viewer, controller)
 
     def attach_scene() -> Any:
-        return server.protocol.addAttachment(
-            memoryview(controller.download_scene())
-        )
+        return server.protocol.addAttachment(memoryview(controller.download_scene()))
 
     def attach_png() -> Any:
-        attachment = server.protocol.addAttachment(
-            memoryview(controller.download_png())
-        )
+        attachment = server.protocol.addAttachment(memoryview(controller.download_png()))
         return attachment
 
     scene_download_trigger = server.trigger_name(attach_scene)
@@ -1923,22 +1782,15 @@ def configure_cli() -> argparse.Namespace:
 def scene_from_cli(args: Any) -> SceneState:
     if args.recipe is not None:
         if args.reference is not None or args.tractogram:
-            raise ValueError(
-                "--recipe cannot be combined with "
-                "--reference or --tractogram"
-            )
+            raise ValueError("--recipe cannot be combined with --reference or --tractogram")
 
         return load_recipe(args.recipe)
 
     if args.reference is None:
-        raise ValueError(
-            "--reference is required when --recipe is absent"
-        )
+        raise ValueError("--reference is required when --recipe is absent")
 
     if not args.tractogram:
-        raise ValueError(
-            "At least one --tractogram is required"
-        )
+        raise ValueError("At least one --tractogram is required")
 
     return scene_from_inputs(
         args.reference,

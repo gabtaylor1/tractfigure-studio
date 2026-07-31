@@ -6,23 +6,54 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: .venv/bin/python
+          - os: windows-latest
+            python: .venv/Scripts/python.exe
+          - os: macos-15
+            python: .venv/bin/python
+          - os: macos-15-intel
+            python: .venv/bin/python
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PYVISTA_OFF_SCREEN: "true"
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8
+        with:
+          version: "0.12.0"
+          enable-cache: true
 
       - name: Install Python
         run: uv python install 3.12
 
       - name: Install project
-        run: uv sync --locked --all-extras
+        run: uv sync --frozen --all-extras
+
+      - name: Install Linux rendering libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libopengl0 xvfb
 
       - name: Lint
-        run: .venv/bin/python -m ruff check src tests scripts
+        run: ${{ matrix.python }} -m ruff check src tests scripts
 
-      - name: Test
-        run: .venv/bin/python -m pytest -m "not integration"
+      - name: Unit and rendering tests on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ${{ matrix.python }} -m pytest -m "not integration"
+
+      - name: Unit and rendering tests on Windows
+        if: runner.os == 'Windows'
+        run: ${{ matrix.python }} -m pytest -m "not integration"
+
+      - name: Unit and rendering tests on macOS
+        if: runner.os == 'macOS'
+        run: ${{ matrix.python }} -m pytest -m "not integration"

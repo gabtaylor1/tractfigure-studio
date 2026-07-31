@@ -81,9 +81,7 @@ class CameraState(BaseModel):
             raise ValueError("Camera near clipping distance must be positive")
 
         if far <= near:
-            raise ValueError(
-                "Camera far clipping distance must exceed the near distance"
-            )
+            raise ValueError("Camera far clipping distance must exceed the near distance")
 
         return self
 
@@ -121,13 +119,8 @@ class SceneState(BaseModel):
         if len(layer_ids) != len(set(layer_ids)):
             raise ValueError("Every tract layer ID must be unique")
 
-        if (
-            self.active_layer_id is not None
-            and self.active_layer_id not in layer_ids
-        ):
-            raise ValueError(
-                "active_layer_id must identify a tract in this scene"
-            )
+        if self.active_layer_id is not None and self.active_layer_id not in layer_ids:
+            raise ValueError("active_layer_id must identify a tract in this scene")
 
         return self
 

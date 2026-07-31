@@ -4,13 +4,16 @@
     "path": "../../demo_data/cache/bundle_file_formats_example/template0.nii.gz",
     "visible": true,
     "opacity": 1.0,
+    "sagittal_visible": true,
+    "coronal_visible": true,
+    "axial_visible": true,
     "sagittal_index": null,
     "coronal_index": null,
     "axial_index": null
   },
   "tracts": [
     {
-      "id": "tract-001-cc",
+      "id": "cc-m-sub",
       "name": "cc_m_sub",
       "path": "../../demo_data/cache/bundle_file_formats_example/cc_m_sub.trk",
       "visible": true,
@@ -24,7 +27,7 @@
       "coordinate_report": {}
     },
     {
-      "id": "tract-002-laf",
+      "id": "laf-m-sub",
       "name": "laf_m_sub",
       "path": "../../demo_data/cache/bundle_file_formats_example/laf_m_sub.tck",
       "visible": true,
@@ -38,7 +41,7 @@
       "coordinate_report": {}
     },
     {
-      "id": "tract-003-lpt",
+      "id": "lpt-m-sub",
       "name": "lpt_m_sub",
       "path": "../../demo_data/cache/bundle_file_formats_example/lpt_m_sub.fib",
       "visible": true,
@@ -52,7 +55,7 @@
       "coordinate_report": {}
     },
     {
-      "id": "tract-004-raf",
+      "id": "raf-m-sub",
       "name": "raf_m_sub",
       "path": "../../demo_data/cache/bundle_file_formats_example/raf_m_sub.vtk",
       "visible": true,
@@ -66,7 +69,7 @@
       "coordinate_report": {}
     },
     {
-      "id": "tract-005-rpt",
+      "id": "rpt-m-sub",
       "name": "rpt_m_sub",
       "path": "../../demo_data/cache/bundle_file_formats_example/rpt_m_sub.dpy",
       "visible": true,
@@ -80,7 +83,7 @@
       "coordinate_report": {}
     }
   ],
-  "active_layer_id": "tract-001-cc",
+  "active_layer_id": "cc-m-sub",
   "camera": null,
   "canvas": {
     "width": 1400,

@@ -1,8 +1,4 @@
-"""PyVista conversion helpers with affine-exact NIfTI slice geometry.
-
-This module is a standalone replacement candidate for
-``src/tractfigure/vtk_conversion.py``.  It does not modify a repository.
-"""
+"""PyVista conversion helpers with affine-exact NIfTI slice geometry."""
 
 from collections.abc import Sequence
 
@@ -101,9 +97,7 @@ def _validate_slice_indices(
     validated = tuple(int(value) for value in indices)
     for axis, (value, size) in enumerate(zip(validated, shape, strict=True)):
         if not 0 <= value < size:
-            raise ValueError(
-                f"Slice index {value} is outside axis {axis} with size {size}"
-            )
+            raise ValueError(f"Slice index {value} is outside axis {axis} with size {size}")
     return validated
 
 

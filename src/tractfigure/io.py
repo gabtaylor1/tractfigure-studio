@@ -122,10 +122,7 @@ class TractInspection:
                     f"{self.reference_world_bounds_max}"
                 ),
                 f"  Bounding boxes overlap: {self.bounding_boxes_overlap}",
-                (
-                    "  Point fraction inside reference: "
-                    f"{self.point_fraction_inside_reference:.1%}"
-                ),
+                (f"  Point fraction inside reference: {self.point_fraction_inside_reference:.1%}"),
                 warning_text,
             )
         )
@@ -438,9 +435,7 @@ def detect_source_coordinates(
     )
 
     if best_score <= 0.0:
-        raise ValueError(
-            "No tested coordinate interpretation overlaps the reference image."
-        )
+        raise ValueError("No tested coordinate interpretation overlaps the reference image.")
 
     return CoordinateDetection(
         source_space=best_space,
@@ -576,9 +571,7 @@ def load_tract_layer(
         streamlines = raw_streamlines
     else:
         if not isinstance(reference, Path):
-            raise ValueError(
-                "Automatic coordinate detection requires an explicit reference NIfTI."
-            )
+            raise ValueError("Automatic coordinate detection requires an explicit reference NIfTI.")
         detection = detect_source_coordinates(
             raw_streamlines,
             reference,
@@ -601,9 +594,7 @@ def load_tract_layer(
 
     warnings = []
     if confidence == "low":
-        warnings.append(
-            "The best automatic coordinate interpretation had a small score advantage."
-        )
+        warnings.append("The best automatic coordinate interpretation had a small score advantage.")
     if not bounding_boxes_overlap:
         warnings.append("Tract and reference world-space bounding boxes do not overlap.")
     if fraction_inside < min_reference_overlap:

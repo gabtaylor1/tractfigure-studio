@@ -1,1 +1,1 @@
-"""TractFigure Studio graphical applications."""
+"""Trame graphical interface for TractFigure Studio."""
