@@ -458,7 +458,7 @@ Before coding:
 2. Identify its acceptance criteria and relevant files.
 3. Run the existing targeted tests.
 4. Capture a baseline screenshot.
-5. Make sure everyone agree on file ownership within the team!
+5. Agree on file ownership within the team (sounds boring, but it's very important!)
 
 Check changes frequently:
 
