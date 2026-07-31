@@ -35,6 +35,7 @@ dev = [
 
 [project.scripts]
 tractfigure-viewer = "tractfigure.viewer:main"
+tractfigure-gui = "tractfigure.gui.app_trame_v1_20260730:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tractfigure"]

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import argparse
-import json
 from datetime import datetime
 from itertools import cycle
+from math import isfinite
 from pathlib import Path
+from types import MethodType
 from typing import Any
 from uuid import uuid4
 
 import pyvista as pv
-from pyvista.trame.ui import plotter_ui
+from pyvista.trame.ui import get_viewer, plotter_ui
+from pyvista.trame.ui.vuetify3 import button as pv_button
+from pyvista.trame.ui.vuetify3 import checkbox as pv_checkbox
+from pyvista.trame.ui.vuetify3 import divider as pv_divider
 from trame.app import get_server
 from trame.ui.vuetify3 import SinglePageWithDrawerLayout
 from trame.widgets import vuetify3 as v3
@@ -37,6 +41,149 @@ SLICE_VISIBILITY_FIELDS = {
     "coronal": "coronal_visible",
     "axial": "axial_visible",
 }
+
+ANATOMICAL_PRIMARY_SIDES = {
+    "sagittal": "left",
+    "coronal": "anterior",
+    "axial": "superior",
+}
+
+ANATOMICAL_OPPOSITE_SIDES = {
+    "left": "right",
+    "right": "left",
+    "anterior": "posterior",
+    "posterior": "anterior",
+    "superior": "inferior",
+    "inferior": "superior",
+}
+
+
+def color_with_alpha(color: str, opacity: float) -> str:
+    alpha = int(round(float(opacity) * 255.0))
+    alpha = max(0, min(255, alpha))
+    return f"{color.upper()}{alpha:02X}"
+
+
+NUMERIC_CONTROL_CONFIG: dict[
+    str,
+    tuple[float, float | str, bool],
+] = {
+    "slice_opacity": (0.0, 1.0, False),
+    "sagittal_index": (0.0, "sagittal_max", True),
+    "coronal_index": (0.0, "coronal_max", True),
+    "axial_index": (0.0, "axial_max", True),
+    "active_line_width": (0.5, 10.0, False),
+    "active_tube_radius": (0.05, 2.0, False),
+    "active_tube_sides": (3.0, 24.0, True),
+}
+
+ACTIVE_NUMERIC_MODELS = (
+    "active_line_width",
+    "active_tube_radius",
+    "active_tube_sides",
+)
+
+
+def split_color_and_alpha(
+    value: str,
+) -> tuple[str, float | None]:
+    if not isinstance(value, str):
+        raise ValueError("Color picker must return a hexadecimal color")
+
+    normalized = value.strip().upper()
+
+    if not normalized.startswith("#"):
+        raise ValueError("Color must begin with #")
+
+    if len(normalized) not in {7, 9}:
+        raise ValueError("Color must use #RRGGBB or #RRGGBBAA format")
+
+    try:
+        int(normalized[1:], 16)
+    except ValueError as error:
+        raise ValueError("Color contains non-hexadecimal characters") from error
+
+    color = normalized[:7]
+
+    if len(normalized) == 7:
+        return color, None
+
+    opacity = int(normalized[7:9], 16) / 255.0
+    return color, opacity
+
+
+def numeric_slider(
+    *,
+    label: str,
+    model: str,
+    value: float | int,
+    minimum: float | int,
+    maximum: float | int | tuple[str, int],
+    step: float | int,
+    input_model: str,
+    commit: Any,
+    v_if: str | None = None,
+) -> None:
+    row_arguments: dict[str, Any] = {
+        "classes": "ma-0 align-center",
+    }
+
+    if v_if is not None:
+        row_arguments["v_if"] = v_if
+
+    with v3.VRow(**row_arguments):
+        with v3.VCol(
+            cols=9,
+            classes="pa-0 pr-2",
+        ):
+            v3.VSlider(
+                label=label,
+                v_model=(model, value),
+                min=minimum,
+                max=maximum,
+                step=step,
+                thumb_label=True,
+                hide_details=True,
+            )
+
+        with v3.VCol(
+            cols=3,
+            classes="pa-0",
+        ):
+            v3.VTextField(
+                v_model=(
+                    input_model,
+                    format_numeric_value(
+                        value,
+                        integer=step == 1,
+                    ),
+                ),
+                type="text",
+                inputmode="decimal",
+                autocomplete="off",
+                focus="$event.target.select()",
+                blur=commit,
+                density="compact",
+                variant="outlined",
+                hide_details=True,
+                aria_label=f"{label} value",
+            )
+
+
+def format_numeric_value(
+    value: float | int | None,
+    *,
+    integer: bool,
+) -> str:
+    if value is None:
+        return ""
+
+    numeric = float(value)
+
+    if integer:
+        return str(int(round(numeric)))
+
+    return f"{numeric:g}"
 
 
 def unique_layer_names(paths: list[Path]) -> list[str]:
@@ -158,7 +305,10 @@ class TractFigureController:
         self.visibility_keys: dict[str, str] = {}
         self.color_keys: dict[str, str] = {}
         self.callbacks: list[Any] = []
+        self.numeric_commit_actions: dict[str, Any] = {}
         self._state_sync_in_progress = False
+        self._last_anatomical_plane: str | None = None
+        self._anatomical_side: dict[str, str] = {}
 
         self._initialize_state()
         self.initial_scene = self.scene.model_copy(deep=True)
@@ -176,6 +326,7 @@ class TractFigureController:
 
         self.state.reference_visible = self.scene.image.visible
         self.state.slice_opacity = self.scene.image.opacity
+        self.state.scene_background = self.scene.canvas.background
 
         for slice_name, field_name in (
             SLICE_VISIBILITY_FIELDS.items()
@@ -230,6 +381,7 @@ class TractFigureController:
         self.state.export_path = ""
 
         self._populate_active_controls()
+        self._synchronize_numeric_inputs()
 
     def _register_callbacks(self) -> None:
         self.callbacks.append(
@@ -250,6 +402,11 @@ class TractFigureController:
         self.callbacks.append(
             self.state.change("slice_opacity")(
                 self._on_slice_opacity
+            )
+        )
+        self.callbacks.append(
+            self.state.change("scene_background")(
+                self._on_scene_background
             )
         )
 
@@ -276,7 +433,6 @@ class TractFigureController:
 
         for key, callback in (
             ("active_color", self._on_active_color),
-            ("active_opacity", self._on_active_opacity),
             (
                 "active_render_mode",
                 self._on_active_render_mode,
@@ -314,8 +470,18 @@ class TractFigureController:
             self.reset_active_tract_settings
         )
         self.ctrl.reset_all_settings = self.reset_all_settings
+        self.ctrl.view_perspective = self.view_perspective
+        self.ctrl.view_sagittal = self.view_sagittal
+        self.ctrl.view_coronal = self.view_coronal
+        self.ctrl.view_axial = self.view_axial
         self.ctrl.save_scene = self.save_scene
         self.ctrl.export_png = self.export_png
+
+        for model in NUMERIC_CONTROL_CONFIG:
+            callback = self._make_numeric_commit_callback(model)
+            action_name = f"commit_{model}_input"
+            self.numeric_commit_actions[model] = callback
+            setattr(self.ctrl, action_name, callback)
 
     def _make_visibility_callback(
         self,
@@ -400,19 +566,22 @@ class TractFigureController:
         tract = self._active_tract()
 
         if tract is None:
-            self.state.active_color = "#808080"
-            self.state.active_opacity = 1.0
+            self.state.active_color = "#808080FF"
             self.state.active_render_mode = "tube"
             self.state.active_line_width = 2.0
             self.state.active_tube_radius = 0.35
             self.state.active_tube_sides = 8
             self.state.active_warnings_text = ""
             self.state.active_warnings_visible = False
-            self.state.active_coordinate_report = ""
+            self._synchronize_numeric_inputs(
+                ACTIVE_NUMERIC_MODELS
+            )
             return
 
-        self.state.active_color = tract.color
-        self.state.active_opacity = tract.opacity
+        self.state.active_color = color_with_alpha(
+            tract.color,
+            tract.opacity,
+        )
         self.state.active_render_mode = tract.render_mode
         self.state.active_line_width = tract.line_width
         self.state.active_tube_radius = tract.tube_radius
@@ -427,10 +596,8 @@ class TractFigureController:
         )
         self.state.active_warnings_visible = bool(warnings)
 
-        self.state.active_coordinate_report = json.dumps(
-            tract.coordinate_report,
-            indent=2,
-            default=str,
+        self._synchronize_numeric_inputs(
+            ACTIVE_NUMERIC_MODELS
         )
 
     def _synchronize_state_from_scene(self) -> None:
@@ -439,6 +606,9 @@ class TractFigureController:
         try:
             self.state.reference_visible = self.scene.image.visible
             self.state.slice_opacity = self.scene.image.opacity
+            self.state.scene_background = (
+                self.scene.canvas.background
+            )
 
             for slice_name, field_name in (
                 SLICE_VISIBILITY_FIELDS.items()
@@ -477,13 +647,14 @@ class TractFigureController:
             )
             self._refresh_layer_items()
             self._populate_active_controls()
+            self._synchronize_numeric_inputs()
         finally:
             self._state_sync_in_progress = False
 
     def set_view(self, view: Any) -> None:
         self.view = view
         self.ctrl.view_update = view.update
-        self.ctrl.view_reset_camera = view.reset_camera
+        self.ctrl.view_reset_camera = self.reset_camera
 
     def update_view(
         self,
@@ -507,6 +678,203 @@ class TractFigureController:
             update_camera()
         else:
             self.view.update()
+
+    def _assign_state_without_callback(
+        self,
+        key: str,
+        value: Any,
+    ) -> None:
+        previous = self._state_sync_in_progress
+        self._state_sync_in_progress = True
+
+        try:
+            setattr(self.state, key, value)
+        finally:
+            self._state_sync_in_progress = previous
+
+    def _numeric_bounds(
+        self,
+        key: str,
+    ) -> tuple[float, float, bool]:
+        minimum, maximum_source, integer = (
+            NUMERIC_CONTROL_CONFIG[key]
+        )
+
+        if isinstance(maximum_source, str):
+            maximum = float(
+                getattr(self.state, maximum_source)
+            )
+        else:
+            maximum = float(maximum_source)
+
+        return float(minimum), maximum, integer
+
+    def _synchronize_numeric_input(
+        self,
+        key: str,
+        value: float | int | None = None,
+    ) -> None:
+        if value is None:
+            value = getattr(self.state, key)
+
+        _minimum, _maximum, integer = self._numeric_bounds(key)
+        self._assign_state_without_callback(
+            f"{key}_input",
+            format_numeric_value(
+                value,
+                integer=integer,
+            ),
+        )
+
+    def _synchronize_numeric_inputs(
+        self,
+        models: tuple[str, ...] | None = None,
+    ) -> None:
+        selected = (
+            tuple(NUMERIC_CONTROL_CONFIG)
+            if models is None
+            else models
+        )
+
+        for key in selected:
+            self._synchronize_numeric_input(key)
+
+    def _make_numeric_commit_callback(self, key: str):
+        def callback(
+            *_args: Any,
+            **_kwargs: Any,
+        ) -> None:
+            self._commit_numeric_input(key)
+
+        return callback
+
+    def _restore_numeric_input(
+        self,
+        key: str,
+        message: str,
+    ) -> None:
+        self._synchronize_numeric_input(key)
+        self.state.status_message = message
+
+    def _commit_numeric_input(self, key: str) -> None:
+        input_key = f"{key}_input"
+        raw_value = getattr(self.state, input_key, "")
+        text = "" if raw_value is None else str(raw_value).strip()
+        label = key.replace("_", " ").capitalize()
+
+        if not text:
+            self._restore_numeric_input(
+                key,
+                f"{label} was left blank; previous value retained",
+            )
+            return
+
+        try:
+            numeric = float(text)
+        except ValueError:
+            self._restore_numeric_input(
+                key,
+                f"{label} must be numeric; previous value retained",
+            )
+            return
+
+        minimum, maximum, integer = self._numeric_bounds(key)
+
+        if not isfinite(numeric):
+            self._restore_numeric_input(
+                key,
+                f"{label} must be finite; previous value retained",
+            )
+            return
+
+        if numeric < minimum or numeric > maximum:
+            self._restore_numeric_input(
+                key,
+                f"{label} must be between {minimum:g} and "
+                f"{maximum:g}; previous value retained",
+            )
+            return
+
+        if integer and not numeric.is_integer():
+            self._restore_numeric_input(
+                key,
+                f"{label} must be a whole number; "
+                "previous value retained",
+            )
+            return
+
+        normalized: float | int = (
+            int(numeric) if integer else numeric
+        )
+        setattr(self.state, key, normalized)
+        self._synchronize_numeric_input(key, normalized)
+        self.state.status_message = (
+            f"{label} set to "
+            f"{format_numeric_value(normalized, integer=integer)}"
+        )
+
+    def _normalize_numeric_state(
+        self,
+        *,
+        key: str,
+        raw_value: Any,
+        current_value: float | int,
+        minimum: float | int,
+        maximum: float | int,
+        integer: bool = False,
+    ) -> float | int | None:
+        try:
+            numeric = float(raw_value)
+        except (TypeError, ValueError):
+            self._assign_state_without_callback(
+                key,
+                current_value,
+            )
+            self._synchronize_numeric_input(
+                key,
+                current_value,
+            )
+            self.state.status_message = (
+                f"{key.replace('_', ' ').capitalize()} "
+                "must be numeric"
+            )
+            return None
+
+        if not isfinite(numeric):
+            self._assign_state_without_callback(
+                key,
+                current_value,
+            )
+            self._synchronize_numeric_input(
+                key,
+                current_value,
+            )
+            self.state.status_message = (
+                f"{key.replace('_', ' ').capitalize()} "
+                "must be finite"
+            )
+            return None
+
+        bounded = max(float(minimum), min(float(maximum), numeric))
+        normalized: float | int
+
+        if integer:
+            normalized = int(round(bounded))
+        else:
+            normalized = bounded
+
+        if raw_value != normalized:
+            self._assign_state_without_callback(
+                key,
+                normalized,
+            )
+
+        self._synchronize_numeric_input(
+            key,
+            normalized,
+        )
+
+        return normalized
 
     def _on_all_tracts_visible(
         self,
@@ -578,12 +946,54 @@ class TractFigureController:
         if self._state_sync_in_progress:
             return
 
-        opacity = float(slice_opacity)
+        opacity = self._normalize_numeric_state(
+            key="slice_opacity",
+            raw_value=slice_opacity,
+            current_value=self.scene.image.opacity,
+            minimum=0.0,
+            maximum=1.0,
+        )
+
+        if opacity is None:
+            return
 
         if abs(self.scene.image.opacity - opacity) < 1e-9:
             return
 
         self.renderer.set_image_opacity(opacity)
+        self.update_view()
+
+    def _on_scene_background(
+        self,
+        scene_background: str,
+        **_kwargs: Any,
+    ) -> None:
+        if self._state_sync_in_progress:
+            return
+
+        try:
+            color, _opacity = split_color_and_alpha(
+                scene_background
+            )
+        except ValueError as error:
+            self._assign_state_without_callback(
+                "scene_background",
+                self.scene.canvas.background,
+            )
+            self.state.status_message = str(error)
+            return
+
+        if self.scene.canvas.background == color:
+            return
+
+        normalized = self.renderer.set_background(color)
+        self._assign_state_without_callback(
+            "scene_background",
+            normalized,
+        )
+        self.state.status_message = (
+            f"Background changed to {normalized}"
+        )
         self.update_view()
 
     def _on_slice_indices(
@@ -593,17 +1003,41 @@ class TractFigureController:
         if self._state_sync_in_progress:
             return
 
-        indices = (
-            int(self.state.sagittal_index),
-            int(self.state.coronal_index),
-            int(self.state.axial_index),
-        )
-
         current = (
             self.scene.image.sagittal_index,
             self.scene.image.coronal_index,
             self.scene.image.axial_index,
         )
+
+        normalized = tuple(
+            self._normalize_numeric_state(
+                key=key,
+                raw_value=getattr(self.state, key),
+                current_value=current_value,
+                minimum=0,
+                maximum=maximum,
+                integer=True,
+            )
+            for key, current_value, maximum in zip(
+                (
+                    "sagittal_index",
+                    "coronal_index",
+                    "axial_index",
+                ),
+                current,
+                (
+                    self.state.sagittal_max,
+                    self.state.coronal_max,
+                    self.state.axial_max,
+                ),
+                strict=True,
+            )
+        )
+
+        if any(value is None for value in normalized):
+            return
+
+        indices = tuple(int(value) for value in normalized)
 
         if indices == current:
             return
@@ -621,49 +1055,40 @@ class TractFigureController:
 
         tract = self._active_tract()
 
-        if tract is None or tract.color == active_color:
+        if tract is None:
             return
 
         try:
-            self.renderer.set_tract_color(
-                tract.id,
-                active_color,
-            )
+            color, opacity = split_color_and_alpha(active_color)
         except ValueError as error:
             self.state.status_message = str(error)
-            self.state.active_color = tract.color
+            self._assign_state_without_callback(
+                "active_color",
+                color_with_alpha(tract.color, tract.opacity),
+            )
             return
 
+        target_opacity = (
+            tract.opacity if opacity is None else opacity
+        )
+
+        if (
+            tract.color == color
+            and abs(tract.opacity - target_opacity) < 1e-9
+        ):
+            return
+
+        self.renderer.set_tract_appearance(
+            tract.id,
+            color,
+            target_opacity,
+        )
         setattr(
             self.state,
             self.color_keys[tract.id],
             tract.color,
         )
         self._refresh_layer_items()
-        self.update_view()
-
-    def _on_active_opacity(
-        self,
-        active_opacity: float,
-        **_kwargs: Any,
-    ) -> None:
-        if self._state_sync_in_progress:
-            return
-
-        tract = self._active_tract()
-
-        if tract is None:
-            return
-
-        opacity = float(active_opacity)
-
-        if abs(tract.opacity - opacity) < 1e-9:
-            return
-
-        self.renderer.set_tract_opacity(
-            tract.id,
-            opacity,
-        )
         self.update_view()
 
     def _on_active_render_mode(
@@ -701,7 +1126,16 @@ class TractFigureController:
         if tract is None:
             return
 
-        width = float(active_line_width)
+        width = self._normalize_numeric_state(
+            key="active_line_width",
+            raw_value=active_line_width,
+            current_value=tract.line_width,
+            minimum=0.5,
+            maximum=10.0,
+        )
+
+        if width is None:
+            return
 
         if abs(tract.line_width - width) < 1e-9:
             return
@@ -725,7 +1159,16 @@ class TractFigureController:
         if tract is None:
             return
 
-        radius = float(active_tube_radius)
+        radius = self._normalize_numeric_state(
+            key="active_tube_radius",
+            raw_value=active_tube_radius,
+            current_value=tract.tube_radius,
+            minimum=0.05,
+            maximum=2.0,
+        )
+
+        if radius is None:
+            return
 
         if abs(tract.tube_radius - radius) < 1e-9:
             return
@@ -749,7 +1192,17 @@ class TractFigureController:
         if tract is None:
             return
 
-        sides = int(active_tube_sides)
+        sides = self._normalize_numeric_state(
+            key="active_tube_sides",
+            raw_value=active_tube_sides,
+            current_value=tract.tube_sides,
+            minimum=3,
+            maximum=24,
+            integer=True,
+        )
+
+        if sides is None:
+            return
 
         if tract.tube_sides == sides:
             return
@@ -760,8 +1213,45 @@ class TractFigureController:
         )
         self.update_view()
 
+    def _set_anatomical_view(self, plane: str) -> None:
+        primary = ANATOMICAL_PRIMARY_SIDES[plane]
+
+        if self._last_anatomical_plane == plane:
+            current = self._anatomical_side.get(
+                plane,
+                primary,
+            )
+            side = ANATOMICAL_OPPOSITE_SIDES[current]
+        else:
+            side = primary
+
+        self.renderer.set_anatomical_view(plane, side)
+        self._last_anatomical_plane = plane
+        self._anatomical_side[plane] = side
+        self._synchronize_camera_to_view()
+        self.state.status_message = (
+            f"{plane.capitalize()} view: {side.capitalize()}"
+        )
+
+    def view_sagittal(self) -> None:
+        self._set_anatomical_view("sagittal")
+
+    def view_coronal(self) -> None:
+        self._set_anatomical_view("coronal")
+
+    def view_axial(self) -> None:
+        self._set_anatomical_view("axial")
+
+    def view_perspective(self) -> None:
+        self.renderer.set_perspective_view()
+        self._last_anatomical_plane = None
+        self._synchronize_camera_to_view()
+        self.state.status_message = "Perspective view"
+
     def reset_camera(self) -> None:
         self.renderer.reset_camera()
+        self._last_anatomical_plane = None
+        self._anatomical_side.clear()
         self._synchronize_camera_to_view()
         self.state.status_message = "Camera reset"
 
@@ -823,9 +1313,11 @@ class TractFigureController:
         self.update_view()
 
     def reset_all_settings(self) -> None:
-        restored = self.initial_scene.model_copy(deep=True)
-        self.renderer.load_scene(restored)
-        self.scene = self.renderer._require_scene()
+        self.scene = self.renderer.restore_scene_settings(
+            self.initial_scene
+        )
+        self._last_anatomical_plane = None
+        self._anatomical_side.clear()
         self._synchronize_state_from_scene()
         self.update_view()
         self._synchronize_camera_to_view()
@@ -836,32 +1328,218 @@ class TractFigureController:
             "%Y%m%d_%H%M%S_%f"
         )
 
-    def save_scene(self) -> None:
-        output_path = (
-            self.output_directory
-            / f"tractfigure_scene_{self._timestamp()}.json"
-        )
+    def _flush_state(self) -> None:
+        flush = getattr(self.state, "flush", None)
 
-        saved_path = self.renderer.save_scene(output_path)
-        self.state.status_message = "Scene recipe saved"
+        if callable(flush):
+            flush()
+
+    def _set_output_success(
+        self,
+        message: str,
+        saved_path: Path,
+    ) -> None:
+        self.state.status_message = (
+            f"{message}: {saved_path.name}"
+        )
         self.state.export_path = str(saved_path)
+        self._flush_state()
 
-    def export_png(self) -> None:
-        output_path = (
-            self.output_directory
-            / f"tractfigure_render_{self._timestamp()}.png"
+    def _set_output_failure(
+        self,
+        action: str,
+        error: Exception,
+    ) -> None:
+        self.state.status_message = (
+            f"{action} failed: "
+            f"{type(error).__name__}: {error}"
         )
+        self.state.export_path = ""
+        self._flush_state()
 
-        self.scene.camera = self.renderer.capture_camera()
+    def save_scene(self) -> Path:
+        try:
+            output_path = (
+                self.output_directory
+                / f"tractfigure_scene_{self._timestamp()}.json"
+            )
+            saved_path = self.renderer.save_scene(output_path)
+        except Exception as error:
+            self._set_output_failure("Save scene", error)
+            raise
 
-        saved_path = self.renderer.export_png(
-            output_path,
-            self.scene.canvas.width,
-            self.scene.canvas.height,
+        self._set_output_success(
+            "Scene recipe saved; browser download ready",
+            saved_path,
         )
+        return saved_path
 
-        self.state.status_message = "PNG exported"
-        self.state.export_path = str(saved_path)
+    def download_scene(self) -> bytes:
+        saved_path = self.save_scene()
+
+        try:
+            return saved_path.read_bytes()
+        except OSError as error:
+            self._set_output_failure(
+                "Read saved scene for download",
+                error,
+            )
+            raise
+
+    def export_png(self) -> Path:
+        try:
+            output_path = (
+                self.output_directory
+                / f"tractfigure_render_{self._timestamp()}.png"
+            )
+
+            self.scene.camera = self.renderer.capture_camera()
+
+            saved_path = self.renderer.export_png(
+                output_path,
+                self.scene.canvas.width,
+                self.scene.canvas.height,
+            )
+        except Exception as error:
+            self._set_output_failure("Export PNG", error)
+            raise
+
+        self._set_output_success(
+            "PNG exported; browser download ready",
+            saved_path,
+        )
+        return saved_path
+
+    def download_png(self) -> bytes:
+        try:
+            self.scene.camera = self.renderer.capture_camera()
+            png_data = self.renderer.screenshot_png(
+                self.scene.canvas.width,
+                self.scene.canvas.height,
+            )
+        except Exception as error:
+            self._set_output_failure(
+                "Export PNG",
+                error,
+            )
+            raise
+
+        self.state.status_message = "PNG download ready"
+        self.state.export_path = "Browser download"
+        self._flush_state()
+        return png_data
+
+
+def install_viewer_controls(
+    viewer: Any,
+    controller: TractFigureController,
+) -> None:
+    def ui_controls(
+        self: Any,
+        mode: str | None = None,
+        default_server_rendering: bool = True,
+        v_show: Any = None,
+    ) -> Any:
+        with v3.VRow(
+            v_show=v_show,
+            classes="pa-0 ma-0 align-center fill-height",
+            style="flex-wrap: nowrap",
+        ) as row:
+            server = row.server
+
+            for state_key, callback in (
+                (self.GRID, self.on_grid_visibility_change),
+                (self.OUTLINE, self.on_outline_visibility_change),
+                (
+                    self.SERVER_RENDERING,
+                    self.on_rendering_mode_change,
+                ),
+            ):
+                controller.callbacks.append(
+                    server.state.change(state_key)(callback)
+                )
+
+            pv_divider(vertical=True, classes="mr-1")
+            pv_button(
+                click=controller.reset_camera,
+                icon="mdi-arrow-expand-all",
+                tooltip="Reset Camera",
+            )
+            pv_divider(vertical=True, classes="mx-1")
+            pv_button(
+                click=controller.view_perspective,
+                icon="mdi-axis-arrow",
+                tooltip="Perspective view",
+            )
+
+            v3.VBtn(
+                "Sagittal L/R",
+                click=controller.view_sagittal,
+                size="small",
+                variant="text",
+            )
+            v3.VBtn(
+                "Coronal A/P",
+                click=controller.view_coronal,
+                size="small",
+                variant="text",
+            )
+            v3.VBtn(
+                "Axial S/I",
+                click=controller.view_axial,
+                size="small",
+                variant="text",
+            )
+
+            pv_divider(vertical=True, classes="mx-1")
+            pv_checkbox(
+                model=(self.OUTLINE, False),
+                icons=("mdi-cube", "mdi-cube-off"),
+                tooltip=(
+                    "Toggle bounding box "
+                    f"({{{{ {self.OUTLINE} ? 'on' : 'off' }}}})"
+                ),
+            )
+            pv_checkbox(
+                model=(self.GRID, False),
+                icons=("mdi-ruler-square", "mdi-ruler-square"),
+                tooltip=(
+                    "Toggle ruler "
+                    f"({{{{ {self.GRID} ? 'on' : 'off' }}}})"
+                ),
+            )
+
+            if mode == "trame":
+                pv_divider(vertical=True, classes="mx-1")
+                pv_checkbox(
+                    model=(
+                        self.SERVER_RENDERING,
+                        default_server_rendering,
+                    ),
+                    icons=("mdi-dns", "mdi-open-in-app"),
+                    tooltip=(
+                        "Toggle rendering mode "
+                        f"({{{{ {self.SERVER_RENDERING} "
+                        "? 'remote' : 'local' }}}})"
+                    ),
+                )
+
+            def attach_export() -> Any:
+                return server.protocol.addAttachment(self.export())
+
+            pv_button(
+                click=(
+                    "utils.download('scene-export.html', "
+                    f"trigger('{server.trigger_name(attach_export)}'), "
+                    "'application/octet-stream')"
+                ),
+                icon="mdi-download",
+                tooltip="Export scene as HTML",
+            )
+
+        return row
+
+    viewer.ui_controls = MethodType(ui_controls, viewer)
 
 
 def build_ui(
@@ -869,6 +1547,38 @@ def build_ui(
     controller: TractFigureController,
 ) -> Any:
     ctrl = server.controller
+    viewer = get_viewer(
+        controller.renderer.plotter,
+        server=server,
+    )
+    install_viewer_controls(viewer, controller)
+
+    def attach_scene() -> Any:
+        return server.protocol.addAttachment(
+            memoryview(controller.download_scene())
+        )
+
+    def attach_png() -> Any:
+        attachment = server.protocol.addAttachment(
+            memoryview(controller.download_png())
+        )
+        return attachment
+
+    scene_download_trigger = server.trigger_name(attach_scene)
+    png_download_trigger = server.trigger_name(attach_png)
+
+    scene_download_click = (
+        "utils.download("
+        "'tractfigure_scene_' + Date.now() + '.json', "
+        f"trigger('{scene_download_trigger}'), "
+        "'application/json')"
+    )
+    png_download_click = (
+        "utils.download("
+        "'tractfigure_render_' + Date.now() + '.png', "
+        f"trigger('{png_download_trigger}'), "
+        "'image/png')"
+    )
 
     with SinglePageWithDrawerLayout(server) as layout:
         layout.title.set_text("TractFigure Studio")
@@ -877,24 +1587,26 @@ def build_ui(
         with layout.toolbar:
             v3.VSpacer()
             v3.VBtn(
-                "Reset camera",
-                prepend_icon="mdi-camera-retake",
-                click=ctrl.reset_camera,
-            )
-            v3.VBtn(
                 "Reset all settings",
                 prepend_icon="mdi-restore",
                 click=ctrl.reset_all_settings,
+                size="small",
             )
             v3.VBtn(
                 "Save scene",
                 prepend_icon="mdi-content-save",
-                click=ctrl.save_scene,
+                click=scene_download_click,
+                loading=("trame__busy", False),
+                disabled=("trame__busy", False),
+                size="small",
             )
             v3.VBtn(
                 "Export PNG",
                 prepend_icon="mdi-image",
-                click=ctrl.export_png,
+                click=png_download_click,
+                loading=("trame__busy", False),
+                disabled=("trame__busy", False),
+                size="small",
             )
 
         with layout.drawer:
@@ -932,56 +1644,48 @@ def build_ui(
                         classes="ml-4",
                     )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Slice opacity",
-                    v_model=(
-                        "slice_opacity",
-                        controller.scene.image.opacity,
-                    ),
-                    min=0.0,
-                    max=1.0,
+                    model="slice_opacity",
+                    value=controller.scene.image.opacity,
+                    minimum=0.0,
+                    maximum=1.0,
                     step=0.05,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="slice_opacity_input",
+                    commit=ctrl.commit_slice_opacity_input,
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Sagittal",
-                    v_model=(
-                        "sagittal_index",
-                        controller.scene.image.sagittal_index,
-                    ),
-                    min=0,
-                    max=("sagittal_max", 0),
+                    model="sagittal_index",
+                    value=controller.scene.image.sagittal_index,
+                    minimum=0,
+                    maximum=("sagittal_max", 0),
                     step=1,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="sagittal_index_input",
+                    commit=ctrl.commit_sagittal_index_input,
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Coronal",
-                    v_model=(
-                        "coronal_index",
-                        controller.scene.image.coronal_index,
-                    ),
-                    min=0,
-                    max=("coronal_max", 0),
+                    model="coronal_index",
+                    value=controller.scene.image.coronal_index,
+                    minimum=0,
+                    maximum=("coronal_max", 0),
                     step=1,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="coronal_index_input",
+                    commit=ctrl.commit_coronal_index_input,
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Axial",
-                    v_model=(
-                        "axial_index",
-                        controller.scene.image.axial_index,
-                    ),
-                    min=0,
-                    max=("axial_max", 0),
+                    model="axial_index",
+                    value=controller.scene.image.axial_index,
+                    minimum=0,
+                    maximum=("axial_max", 0),
                     step=1,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="axial_index_input",
+                    commit=ctrl.commit_axial_index_input,
                 )
 
                 v3.VDivider(classes="my-3")
@@ -1042,28 +1746,20 @@ def build_ui(
                     classes="mb-3",
                 )
 
-                v3.VColorPicker(
-                    v_model=(
-                        "active_color",
-                        controller.state.active_color,
-                    ),
-                    hide_inputs=True,
-                    show_swatches=False,
-                    width=360,
-                )
-
-                v3.VSlider(
-                    label="Opacity",
-                    v_model=(
-                        "active_opacity",
-                        controller.state.active_opacity,
-                    ),
-                    min=0.0,
-                    max=1.0,
-                    step=0.05,
-                    thumb_label=True,
-                    hide_details=True,
-                )
+                with v3.VSheet(
+                    classes="mb-2",
+                    style="min-height: 360px;",
+                ):
+                    v3.VColorPicker(
+                        v_model=(
+                            "active_color",
+                            controller.state.active_color,
+                        ),
+                        mode="hexa",
+                        hide_inputs=False,
+                        show_swatches=False,
+                        width=360,
+                    )
 
                 v3.VSelect(
                     label="Rendering mode",
@@ -1078,47 +1774,42 @@ def build_ui(
                     hide_details=True,
                     density="compact",
                     variant="outlined",
+                    classes="mt-6",
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Line width",
-                    v_model=(
-                        "active_line_width",
-                        controller.state.active_line_width,
-                    ),
-                    min=0.5,
-                    max=10.0,
+                    model="active_line_width",
+                    value=controller.state.active_line_width,
+                    minimum=0.5,
+                    maximum=10.0,
                     step=0.5,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="active_line_width_input",
+                    commit=ctrl.commit_active_line_width_input,
                     v_if="active_render_mode === 'line'",
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Tube radius (mm)",
-                    v_model=(
-                        "active_tube_radius",
-                        controller.state.active_tube_radius,
-                    ),
-                    min=0.05,
-                    max=2.0,
+                    model="active_tube_radius",
+                    value=controller.state.active_tube_radius,
+                    minimum=0.05,
+                    maximum=2.0,
                     step=0.05,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="active_tube_radius_input",
+                    commit=ctrl.commit_active_tube_radius_input,
                     v_if="active_render_mode === 'tube'",
                 )
 
-                v3.VSlider(
+                numeric_slider(
                     label="Tube sides",
-                    v_model=(
-                        "active_tube_sides",
-                        controller.state.active_tube_sides,
-                    ),
-                    min=3,
-                    max=24,
+                    model="active_tube_sides",
+                    value=controller.state.active_tube_sides,
+                    minimum=3,
+                    maximum=24,
                     step=1,
-                    thumb_label=True,
-                    hide_details=True,
+                    input_model="active_tube_sides_input",
+                    commit=ctrl.commit_active_tube_sides_input,
                     v_if="active_render_mode === 'tube'",
                 )
 
@@ -1132,17 +1823,23 @@ def build_ui(
                     classes="mt-3",
                 )
 
-                v3.VTextarea(
-                    label="Coordinate inspection",
-                    v_model=(
-                        "active_coordinate_report",
-                        "",
-                    ),
-                    readonly=True,
-                    rows=8,
-                    variant="outlined",
-                    classes="mt-3",
-                )
+                v3.VDivider(classes="my-3")
+                v3.VCardTitle("Scene settings")
+
+                with v3.VSheet(
+                    classes="mb-2",
+                    style="min-height: 360px;",
+                ):
+                    v3.VColorPicker(
+                        v_model=(
+                            "scene_background",
+                            controller.scene.canvas.background,
+                        ),
+                        mode="hex",
+                        hide_inputs=False,
+                        show_swatches=False,
+                        width=360,
+                    )
 
                 v3.VDivider(classes="my-3")
 
@@ -1177,6 +1874,8 @@ def build_ui(
                     controller.renderer.plotter,
                     mode="trame",
                     default_server_rendering=True,
+                    collapse_menu=False,
+                    add_menu=True,
                     server=server,
                 )
 

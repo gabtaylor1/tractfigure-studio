@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import re
 from collections.abc import Callable
 from dataclasses import asdict, is_dataclass
@@ -9,6 +10,7 @@ from typing import Any
 import nibabel as nib
 import numpy as np
 import pyvista as pv
+from PIL import Image, ImageOps
 
 from tractfigure.io import load_tract_layer
 from tractfigure.scene_state_v1_20260730 import (
@@ -28,6 +30,15 @@ SLICE_VISIBILITY_FIELDS = {
     "sagittal": "sagittal_visible",
     "coronal": "coronal_visible",
     "axial": "axial_visible",
+}
+
+ANATOMICAL_VIEW_CONFIG = {
+    ("sagittal", "left"): ("view_yz", True),
+    ("sagittal", "right"): ("view_yz", False),
+    ("coronal", "anterior"): ("view_xz", True),
+    ("coronal", "posterior"): ("view_xz", False),
+    ("axial", "superior"): ("view_xy", False),
+    ("axial", "inferior"): ("view_xy", True),
 }
 
 
@@ -328,6 +339,7 @@ class SceneRenderer:
             layer.streamlines,
             max_streamlines=tract_state.max_streamlines,
         )
+        line_mesh.verts = np.empty(0, dtype=np.int64)
 
         self.layers_by_id[tract_state.id] = layer
         self.line_meshes_by_id[tract_state.id] = line_mesh
@@ -428,6 +440,27 @@ class SceneRenderer:
         self.actors_by_id[layer_id].GetProperty().SetOpacity(
             tract_state.opacity
         )
+        self._refresh()
+
+    def set_tract_appearance(
+        self,
+        layer_id: str,
+        color: str,
+        opacity: float,
+    ) -> None:
+        scene = self._require_scene()
+        tract_state = scene.tract_by_id(layer_id)
+
+        tract_state.color = color
+        tract_state.opacity = opacity
+
+        actor_property = self.actors_by_id[
+            layer_id
+        ].GetProperty()
+        actor_property.SetColor(
+            *pv.Color(tract_state.color).float_rgb
+        )
+        actor_property.SetOpacity(tract_state.opacity)
         self._refresh()
 
     def set_render_mode(
@@ -610,15 +643,279 @@ class SceneRenderer:
         if refresh:
             self.plotter.render()
 
-    def reset_camera(self) -> CameraState:
+    def set_anatomical_view(
+        self,
+        plane: str,
+        side: str,
+    ) -> CameraState:
         scene = self._require_scene()
 
-        self.plotter.reset_camera()
+        try:
+            view_method_name, negative = ANATOMICAL_VIEW_CONFIG[
+                (plane, side)
+            ]
+        except KeyError as error:
+            valid = ", ".join(
+                f"{view_plane}:{view_side}"
+                for view_plane, view_side in ANATOMICAL_VIEW_CONFIG
+            )
+            raise ValueError(
+                f"Unknown anatomical view {plane}:{side}. "
+                f"Valid views: {valid}"
+            ) from error
+
+        self.plotter.camera.SetParallelProjection(1)
+        view_method = getattr(self.plotter, view_method_name)
+        view_method(
+            negative=negative,
+            render=False,
+        )
         self.plotter.reset_camera_clipping_range()
         self.plotter.render()
 
         scene.camera = self.capture_camera()
         return scene.camera
+
+    def set_perspective_view(self) -> CameraState:
+        scene = self._require_scene()
+
+        self.plotter.camera.SetParallelProjection(0)
+        self.plotter.view_isometric(render=False)
+        self.plotter.reset_camera_clipping_range()
+        self.plotter.render()
+
+        scene.camera = self.capture_camera()
+        return scene.camera
+
+    def set_background(self, color: str) -> str:
+        scene = self._require_scene()
+        scene.canvas.background = color
+
+        normalized = scene.canvas.background
+        self.plotter.set_background(normalized)
+        self.plotter.render()
+        return normalized
+
+    def restore_scene_settings(
+        self,
+        initial_scene: SceneState,
+    ) -> SceneState:
+        scene = self._require_scene()
+
+        current_ids = [tract.id for tract in scene.tracts]
+        initial_ids = [
+            tract.id for tract in initial_scene.tracts
+        ]
+
+        if current_ids != initial_ids:
+            raise ValueError(
+                "Cannot restore settings after tract layers changed"
+            )
+
+        current_reference = Path(
+            scene.image.path
+        ).expanduser().resolve()
+        initial_reference = Path(
+            initial_scene.image.path
+        ).expanduser().resolve()
+
+        if current_reference != initial_reference:
+            raise ValueError(
+                "Cannot restore settings after reference image changed"
+            )
+
+        scene.canvas = initial_scene.canvas.model_copy(deep=True)
+        self.plotter.window_size = (
+            scene.canvas.width,
+            scene.canvas.height,
+        )
+        self.plotter.set_background(scene.canvas.background)
+
+        initial_image = initial_scene.image
+        indices_changed = (
+            scene.image.sagittal_index,
+            scene.image.coronal_index,
+            scene.image.axial_index,
+        ) != (
+            initial_image.sagittal_index,
+            initial_image.coronal_index,
+            initial_image.axial_index,
+        )
+
+        scene.image.visible = initial_image.visible
+        scene.image.opacity = initial_image.opacity
+        scene.image.sagittal_visible = (
+            initial_image.sagittal_visible
+        )
+        scene.image.coronal_visible = (
+            initial_image.coronal_visible
+        )
+        scene.image.axial_visible = initial_image.axial_visible
+        scene.image.sagittal_index = initial_image.sagittal_index
+        scene.image.coronal_index = initial_image.coronal_index
+        scene.image.axial_index = initial_image.axial_index
+
+        if indices_changed:
+            self.load_reference(scene.image)
+        else:
+            for slice_name, actor in self.image_actors.items():
+                actor.SetVisibility(
+                    self._slice_actor_visible(
+                        scene.image,
+                        slice_name,
+                    )
+                )
+                actor.GetProperty().SetOpacity(
+                    scene.image.opacity
+                )
+
+        for initial_tract in initial_scene.tracts:
+            tract = scene.tract_by_id(initial_tract.id)
+            geometry_changed = (
+                tract.render_mode != initial_tract.render_mode
+                or (
+                    initial_tract.render_mode == "tube"
+                    and (
+                        not np.isclose(
+                            tract.tube_radius,
+                            initial_tract.tube_radius,
+                        )
+                        or tract.tube_sides
+                        != initial_tract.tube_sides
+                    )
+                )
+            )
+
+            tract.visible = initial_tract.visible
+            tract.color = initial_tract.color
+            tract.opacity = initial_tract.opacity
+            tract.render_mode = initial_tract.render_mode
+            tract.line_width = initial_tract.line_width
+            tract.tube_radius = initial_tract.tube_radius
+            tract.tube_sides = initial_tract.tube_sides
+
+            if geometry_changed:
+                self._replace_tract_actor(tract)
+                continue
+
+            actor = self.actors_by_id[tract.id]
+            actor.SetVisibility(tract.visible)
+            actor_property = actor.GetProperty()
+            actor_property.SetColor(
+                *pv.Color(tract.color).float_rgb
+            )
+            actor_property.SetOpacity(tract.opacity)
+            actor_property.SetLineWidth(tract.line_width)
+
+        scene.active_layer_id = initial_scene.active_layer_id
+
+        if initial_scene.camera is None:
+            self.plotter.reset_camera()
+            scene.camera = self.capture_camera()
+        else:
+            scene.camera = initial_scene.camera.model_copy(deep=True)
+            self.apply_camera(scene.camera, refresh=False)
+
+        self._refresh()
+        return scene
+
+    def reset_camera(self) -> CameraState:
+        scene = self._require_scene()
+
+        self.plotter.camera.SetParallelProjection(0)
+        self.plotter.view_isometric(render=False)
+        self.plotter.reset_camera(render=False)
+        self.plotter.reset_camera_clipping_range()
+        self.plotter.render()
+
+        scene.camera = self.capture_camera()
+        return scene.camera
+
+    def _orientation_axes_widgets(
+        self,
+    ) -> tuple[tuple[Any, bool], ...]:
+        widgets: list[tuple[Any, bool]] = []
+
+        for renderer in self.plotter.renderers:
+            widget = renderer.axes_widget
+
+            if widget is not None:
+                widgets.append(
+                    (widget, bool(widget.GetEnabled()))
+                )
+
+        return tuple(widgets)
+
+    def _capture_png(
+        self,
+        destination: str | Path | io.BytesIO,
+        width: int,
+        height: int,
+    ) -> np.ndarray:
+        if self.plotter.render_window is None:
+            raise RuntimeError("The render window is unavailable")
+
+        axes_widgets = self._orientation_axes_widgets()
+
+        try:
+            for widget, enabled in axes_widgets:
+                if enabled:
+                    widget.EnabledOff()
+
+            self.plotter.render()
+
+            image = self.plotter.screenshot(
+                filename=None,
+                return_img=True,
+            )
+
+            if image is None:
+                raise RuntimeError("PyVista did not return a screenshot")
+
+            output_image = Image.fromarray(np.asarray(image))
+
+            if output_image.size != (int(width), int(height)):
+                background = pv.Color(
+                    self._require_scene().canvas.background
+                ).int_rgb
+                fill_color: tuple[int, ...]
+
+                if output_image.mode == "RGBA":
+                    fill_color = (*background, 255)
+                else:
+                    fill_color = background
+
+                output_image = ImageOps.pad(
+                    output_image,
+                    (int(width), int(height)),
+                    method=Image.Resampling.LANCZOS,
+                    color=fill_color,
+                    centering=(0.5, 0.5),
+                )
+
+            if isinstance(destination, io.BytesIO):
+                destination.seek(0)
+                destination.truncate(0)
+                output_image.save(destination, format="PNG")
+            else:
+                output_image.save(destination)
+
+            return np.asarray(output_image)
+        finally:
+            for widget, enabled in axes_widgets:
+                if enabled:
+                    widget.EnabledOn()
+
+            self.plotter.render()
+
+    def screenshot_png(
+        self,
+        width: int,
+        height: int,
+    ) -> bytes:
+        buffer = io.BytesIO()
+        self._capture_png(buffer, width, height)
+        return buffer.getvalue()
 
     def save_scene(self, output_path: str | Path) -> Path:
         scene = self._require_scene()
@@ -642,29 +939,11 @@ class SceneRenderer:
         output_path = Path(output_path).expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        old_size = tuple(int(value) for value in self.plotter.window_size)
-
-        try:
-            self.plotter.window_size = (int(width), int(height))
-            self.plotter.render()
-
-            image = self.plotter.screenshot(
-                str(output_path),
-                window_size=(int(width), int(height)),
-                return_img=True,
-            )
-
-            if image is None:
-                raise RuntimeError("PyVista did not return a screenshot")
-
-            if image.shape[:2] != (int(height), int(width)):
-                raise RuntimeError(
-                    "Screenshot dimensions do not match the scene canvas: "
-                    f"{image.shape[1]}×{image.shape[0]}"
-                )
-        finally:
-            self.plotter.window_size = old_size
-            self.plotter.render()
+        self._capture_png(
+            str(output_path),
+            width,
+            height,
+        )
 
         return output_path
 
