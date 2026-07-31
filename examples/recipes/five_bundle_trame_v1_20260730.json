@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "image": {
+    "path": "../../demo_data/cache/bundle_file_formats_example/template0.nii.gz",
+    "visible": true,
+    "opacity": 1.0,
+    "sagittal_index": null,
+    "coronal_index": null,
+    "axial_index": null
+  },
+  "tracts": [
+    {
+      "id": "tract-001-cc",
+      "name": "cc_m_sub",
+      "path": "../../demo_data/cache/bundle_file_formats_example/cc_m_sub.trk",
+      "visible": true,
+      "color": "#E64B35",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 2.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    },
+    {
+      "id": "tract-002-laf",
+      "name": "laf_m_sub",
+      "path": "../../demo_data/cache/bundle_file_formats_example/laf_m_sub.tck",
+      "visible": true,
+      "color": "#4DBBD5",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 2.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    },
+    {
+      "id": "tract-003-lpt",
+      "name": "lpt_m_sub",
+      "path": "../../demo_data/cache/bundle_file_formats_example/lpt_m_sub.fib",
+      "visible": true,
+      "color": "#00A087",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 2.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    },
+    {
+      "id": "tract-004-raf",
+      "name": "raf_m_sub",
+      "path": "../../demo_data/cache/bundle_file_formats_example/raf_m_sub.vtk",
+      "visible": true,
+      "color": "#3C5488",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 2.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    },
+    {
+      "id": "tract-005-rpt",
+      "name": "rpt_m_sub",
+      "path": "../../demo_data/cache/bundle_file_formats_example/rpt_m_sub.dpy",
+      "visible": true,
+      "color": "#F39B7F",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 2.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    }
+  ],
+  "active_layer_id": "tract-001-cc",
+  "camera": null,
+  "canvas": {
+    "width": 1400,
+    "height": 1000,
+    "background": "#FFFFFF"
+  }
+}
