@@ -13,4 +13,4 @@
 ## MNI ICBM 2009 templates
 
 The template files retain the Montreal Neurological Institute license and
-attribution distributed with DIPY. Review that license before redistribution.
+attribution distributed with DIPY.
