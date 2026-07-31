@@ -1,29 +1,26 @@
-# TractFigure Studio Hackathon Student Guide
+# TractFigure Studio Hackathon Guide
+
+Welcome!
 
 TractFigure Studio is a cross-platform Python application for loading,
 inspecting, rendering, registering, and exporting tractography figures. The
 starter repository already includes a working Trame/PyVista viewer, automated
 coordinate normalization, scene recipes, affine-registration utilities,
-demonstration data scripts, tests, and continuous integration.
+demonstration data scripts, and a few tests.
 
-This guide covers the student workflow from cloning the repository through
+This guide covers the workflow from cloning the repository through
 submitting a pull request.
 
 ## 1. Supported systems
 
 The validated environment uses CPython 3.12 and supports:
 
-- Windows 10/11 through local MobaXTerm
+- Windows 10/11 through local MobaXTerm (my preferred method)
 - macOS 15 on Apple Silicon
 - macOS 15 on Intel
 - Ubuntu Linux
 
-The same scientific code and scene recipes are used on every platform.
-Environment activation and Linux display setup are the platform-specific parts.
-
 ## 2. Clone the starter repository
-
-Use the workflow specified by the hackathon organizers.
 
 ### Repository collaborator
 
@@ -64,8 +61,8 @@ Example:
 git switch -c issue-24-glass-brain
 ```
 
-Keep each branch focused on one GitHub issue. Coordinate with teammates before
-editing the same modules.
+Keep each branch focused on one GitHub issue. Please coordinate with teammates before
+editing the same modules!
 
 ## 3. Install uv and create the environment
 
@@ -203,13 +200,10 @@ The fetcher prepares:
 - an MNI ICBM 2009a T1 image
 
 The HCP842 distribution contains 79 tractogram files representing 80 anatomical
-bundles because the left and right fornix are stored together.
+bundles (left and right fornix are stored together; learned that the hard way!).
 
 Downloaded files are placed under `demo_data/cache/`. They are excluded from
-Git. The generated inventory and verification report describe file paths,
-hashes, image geometry, detected coordinates, bounds, and reference overlap.
-
-If the organizers provide a populated data cache, the fetcher will reuse it.
+Git (on purpose).
 
 ## 6. Launch the validated starter scene
 
@@ -239,19 +233,19 @@ The starter viewer provides:
 
 - global and individual tract visibility
 - sagittal, coronal, and axial slice visibility
-- line and tube tract rendering
-- tract color and opacity
-- numeric width, radius, and slice controls
-- anatomical camera views and perspective mode
+- line and tube tract rendering settings
+- tract color and opacity settings
+- width, radius, and slice controls
+- anatomical camera views
 - ruler and bounding-box tools
-- background-color control
-- reset-active-tract and reset-all controls
-- scene recipe saving
-- exact-size PNG export
+- background-color control settings
+- reset-active-tract and reset-all buttons
+- scene recipe saving option
+- PNG export option
 
 ## 7. Understand the scientific contracts
 
-All contributions must preserve the following contracts.
+All contributions must preserve the following:
 
 ### Coordinates
 
@@ -273,20 +267,18 @@ Every public registration matrix maps:
 moving RASMM -> fixed RASMM
 ```
 
-Preserve this direction in functions, UI labels, saved metadata, tests, and
+Please preserve this direction in functions, UI labels, saved metadata, tests, and
 documentation.
 
 ### Scene state
 
 `src/tractfigure/scene_state_v1_20260730.py` is the serialization contract.
-Layer IDs associate visibility, colors, opacity, rendering options, and order
-with the correct tract. Shared recipes use relative paths with forward slashes.
 
 ### Rendering
 
-`src/tractfigure/renderer_trame_v1_20260730.py` owns actors, camera state, and
+`src/tractfigure/renderer_trame_v1_20260730.py` owns the actors, camera state, and
 PNG output. `src/tractfigure/gui/app_trame_v1_20260730.py` binds the browser UI to
-renderer operations. Coordinate conversion belongs in the scientific I/O layer.
+renderer operations. Coordinate conversion belongs in the scientific I/O layer and nowhere else.
 
 ## 8. Repository map
 
@@ -298,37 +290,31 @@ renderer operations. Coordinate conversion belongs in the scientific I/O layer.
 | `src/tractfigure/renderer_trame_v1_20260730.py` | Actors, appearance, camera, save, and export |
 | `src/tractfigure/gui/app_trame_v1_20260730.py` | Trame controls and application entry point |
 | `src/tractfigure/registration.py` | Affine registration, transforms, resampling, and QC |
-| `scripts/` | Reproducible data, fixture, verification, and rendering workflows |
+| `scripts/` | Data, fixture, verification, and rendering workflows |
 | `tests/` | Unit, controller, rendering, registration, and integration tests |
-| `examples/recipes/` | Portable validated scenes |
+| `examples/recipes/` | Portable validated scenes, or "recipes" |
 | `docs/reference_renders/` | Human-reviewed visual references |
-
-Keep the three canonical v1 module names unchanged during the hackathon.
 
 ## 9. Select an issue
 
-Choose an open issue whose acceptance criteria match your team's experience.
-The GitHub issue is the task specification if it narrows the scope below. The
-labels and project boundaries below describe the prepared hackathon tracks.
+Choose an open issue that matches your experience (and/or your interests).
 
 The starter already provides installation, data fetching, automatic coordinate
 detection, independent visibility, reset behavior, scene save/export, portable
 recipes, registration fixtures, tests, reference renders, and four-platform CI.
-Treat failures in those baseline behaviors as regressions and report them to the
-maintainers instead of absorbing them into a feature issue.
+You should treat any failures in those baseline behaviors as regressions and report them ASAP.
 
 ### `neuro`: anatomical presets and tract-palette design
 
 **Goal.** Make anatomically meaningful figures fast and consistent for users
-who understand neuroanatomy but do not want to configure every visual parameter.
+who understand neuroanatomy but do not want to configure every visual parameter themselves.
 
 **Starting point.** The scene model stores tract colors, camera, slice state,
 canvas, and active tract. The viewer supports left/right sagittal,
 anterior/posterior coronal, and superior/inferior axial views.
 
 **Work.** Define named anatomical presentation presets and a documented tract
-palette. Candidate presets are Black Glass, White Anatomy, Orthographic Atlas,
-Transparent Figure, and Four-View Clinical. Specify tract and slice visibility,
+palette. (Examples: Orthographic Atlas, Four-view Clinical). Specify tract and slice visibility,
 camera orientation, projection, background, opacity, and palette behavior. Add
 a preset selector while preserving the source data.
 
@@ -342,50 +328,39 @@ palette names and HEX values are documented; applying a preset preserves layer
 IDs; scene save/reload preserves the result; reference PNGs show the expected
 views.
 
-**Suggested background.** Neuroanatomy, diffusion MRI, scientific
-illustration, or visual design. Registration implementation is outside this
-issue.
-
 ### `registration`: rigid/affine controls and QC overlays
 
-**Goal.** Turn the validated registration backend into a safe and inspectable
+**Goal.** Turn the exisitng registration backend into a safe and inspectable
 workflow.
 
 **Starting point.** `src/tractfigure/registration.py` estimates an affine,
 resamples images, transforms RASMM streamlines, and creates QC figures.
 `scripts/generate_registration_demo.py` supplies deterministic identity, rigid,
-and affine cases using the moving-to-fixed transform contract.
+and affine cases using the moving-to-fixed transform mentioned in the contract.
 
-**Work.** Add rigid and full-affine actions, progress and error feedback,
-transform preview, apply/cancel behavior, and before/after slice overlays.
-Display matrix direction, prevent repeated accidental application, retain the
-original inputs, and cache transformed derivatives.
+**Work.** Add new rigid and full-affine actions, progress and error feedback,
+a transform preview, apply/cancel behavior, and before/after slice overlays.
 
-**Relevant files.** `src/tractfigure/registration.py`, the three canonical v1
+**Relevant files.** `src/tractfigure/registration.py`, the 
 scene/renderer/app modules, `scripts/generate_registration_demo.py`, and
 `tests/test_registration.py`.
 
 **Acceptance criteria.** Identity leaves coordinates unchanged; rigid mode
 adds no scale or shear; full affine follows the moving-RASMM-to-fixed-RASMM
-direction; resampled images use fixed-image geometry; known fixtures improve
-alignment within a documented tolerance; cancel leaves the scene unchanged; QC
-images can be exported.
-
-**Suggested background.** Image registration, medical imaging, numerical
-optimization, or scientific Python.
+direction; known fixtures improve alignment within a documented tolerance; 
+cancel leaves the scene unchanged; QC images can be exported.
 
 ### `rendering`: glass brain, depth peeling, lighting, and gradients
 
-**Goal.** Add publication-quality depth cues while keeping tract identity and
+**Goal.** Add publication-quality rendering while keeping tract identity and
 anatomical context legible.
 
 **Starting point.** The renderer owns separate tract and slice actors, supports
-line and true tube geometry, exports exact-size PNGs, and excludes the
-orientation guide from exported figures.
+line and tube geometry, and exports PNGs.
 
 **Work.** Implement a glass-brain surface option, robust translucent
-composition, controllable lighting, and tract gradients. Keep line mode free of
-point markers. Add only controls with a visible and testable effect.
+composition, controllable lighting, and tract gradients.
+Add only controls with a visible and testable effect.
 
 **Relevant files.** `src/tractfigure/vtk_conversion.py`,
 `src/tractfigure/renderer_trame_v1_20260730.py`,
@@ -393,13 +368,9 @@ point markers. Add only controls with a visible and testable effect.
 `scripts/render_reference_scenes.py`, and renderer tests.
 
 **Acceptance criteria.** Tracts remain legible during camera rotation;
-transparent composition has stable ordering or a documented fallback;
-glass-brain opacity and lighting round-trip through scene recipes; gradients
+glass-brain opacity and lighting work in all scene recipes; gradients
 stay associated with the correct tract; exports retain requested dimensions on
 all CI platforms.
-
-**Suggested background.** VTK/PyVista, computer graphics, scientific
-visualization, or visual design.
 
 ### `ui`: layer cards, linked controls, and global settings
 
@@ -411,23 +382,16 @@ active-layer controls, editable numeric values, tract color/opacity, reset
 controls, background color, ruler, bounding box, render-mode controls, and menu
 collapse.
 
-**Work.** Build scalable layer cards, filtering or search, selection,
+**Work.** Build scalable layer cards, filtering or search features, selection,
 multi-select/linking, and explicit global-versus-active-layer operations.
-Preserve color-coded toggles and ensure component IDs never share unrelated
-state.
 
 **Relevant files.** `src/tractfigure/gui/app_trame_v1_20260730.py`,
 `src/tractfigure/scene_state_v1_20260730.py`, and
 `tests/test_app_trame_v1_20260730.py`.
 
-**Acceptance criteria.** Scenes with at least 80 layers remain navigable;
+**Acceptance criteria.** Scenes with at least 70 layers remain navigable;
 single-layer edits affect exactly one layer ID; linked edits affect exactly the
-selected IDs; controls do not overlap or clip at normal laptop sizes; keyboard
-and color controls are labeled; menu collapse remains available; reset
-semantics remain unchanged.
-
-**Suggested background.** Front-end development, Trame/Vue/Vuetify, UX, or
-accessibility.
+selected IDs; controls do not overlap or clip at normal laptop sizes.
 
 ### `api`: deterministic recipe-based rendering
 
@@ -435,7 +399,7 @@ accessibility.
 portable scene recipe.
 
 **Starting point.** The starter includes a Pydantic scene contract, portable
-path resolution, a renderer, and exact-size PNG export.
+path resolution, a renderer, and PNG export.
 
 **Work.** Add a supported headless CLI/API that loads a recipe, validates its
 data root, renders requested views, reports provenance, and returns useful exit
@@ -452,12 +416,9 @@ state, camera, layer order, colors, opacity, canvas size, and output names;
 relative paths resolve through a configurable data root; invalid recipes fail
 before rendering; a manifest records software versions and input provenance.
 
-**Suggested background.** Python API/CLI design, reproducible research, or CI.
-
 ### `testing`: coordinate and rendering validation
 
-**Goal.** Expand confidence from the supplied fixtures to realistic edge cases
-using stable scientific and state invariants.
+**Goal.** Expand confidence to cover realistic edge cases.
 
 **Starting point.** The suite covers automatic source-space detection, origin
 shifts, world bounds, scene/controller state, independent actors, registration
@@ -468,21 +429,15 @@ files, larger layer counts, camera round-trips, transparency cases, and
 stateful UI regressions. Keep fixtures small and generate them when practical.
 
 **Relevant files.** `tests/`, `src/tractfigure/io.py`,
-`src/tractfigure/vtk_conversion.py`, and the three canonical v1 modules.
+`src/tractfigure/vtk_conversion.py`, and the scene/renderer/app modules.
 
 **Acceptance criteria.** Failures have actionable messages; fixtures are small
-and licensed or generated; deterministic tests cover transform direction,
-finite coordinates, bounds, actors, visibility, camera, output dimensions, and
-portable recipes; the complete CI matrix remains green. Pixel-perfect equality
-across VTK drivers is outside this issue.
-
-**Suggested background.** Testing, neuroimaging formats, QA, or scientific
-software engineering.
+and licensed or generated; the complete CI matrix stays green.
 
 ### `stretch`: video, nonlinear registration, or DSI `.tt.gz`
 
-**Goal.** Complete one bounded advanced extension after your team finishes and
-tests a core issue.
+**Goal.** These are the really "out-there" features! 
+If most or all core issues are resolved quickly, we can start to focus on these.
 
 **Starting point.** Camera state, deterministic frames, affine-transform
 direction, multiple tract formats, and recipe export are established.
@@ -495,15 +450,6 @@ DSI Studio `.tt.gz` adapter that converts coordinates into RASMM.
 and fixtures for nonlinear work; `src/tractfigure/io.py` and I/O tests for
 `.tt.gz`.
 
-**Acceptance criteria.** Video defines frame size, rate, camera path, and
-reproducible frame order; nonlinear registration distinguishes forward and
-inverse deformation and includes a generated fixture; `.tt.gz` loading validates
-finite coordinates, reference overlap, and licensing. Every extension preserves
-the scene contract and original inputs.
-
-**Suggested background.** Advanced visualization, image registration, media
-encoding, or binary file formats.
-
 ## 10. Develop within the existing architecture
 
 Before coding:
@@ -511,20 +457,8 @@ Before coding:
 1. Read the complete GitHub issue.
 2. Identify its acceptance criteria and relevant files.
 3. Run the existing targeted tests.
-4. Capture a baseline screenshot or output when visual behavior is changing.
-5. Agree on file ownership within the team.
-
-During development:
-
-- Add or update tests with each behavior change.
-- Preserve stable layer IDs.
-- Keep paths platform-neutral.
-- Use `pathlib.Path` for filesystem paths.
-- Keep scientific operations outside browser callbacks where practical.
-- Avoid modifying input data in place.
-- Avoid auxiliary marker files and per-subject logs.
-- Keep generated data, environments, caches, and ordinary outputs outside Git.
-- Keep commits small and descriptive.
+4. Capture a baseline screenshot.
+5. Make sure everyone agree on file ownership within the team!
 
 Check changes frequently:
 
@@ -534,7 +468,7 @@ git diff --check
 git diff
 ```
 
-Commit a coherent checkpoint:
+Commit your checkpoints:
 
 ```bash
 git add <RELEVANT_FILES>
@@ -559,14 +493,14 @@ Run Ruff on all maintained Python files:
 python -m ruff check src tests scripts
 ```
 
-If Ruff reports an explicitly auto-fixable formatting/import issue:
+If Ruff reports an auto-fixable formatting/import issue:
 
 ```bash
 python -m ruff check src tests scripts --fix
 python -m ruff check src tests scripts
 ```
 
-Review the resulting diff.
+Make sure to review the resulting diff.
 
 ## 12. Run the full local test gates
 
@@ -606,22 +540,6 @@ xvfb-run -a python scripts/preflight.py
 
 ## 13. Verify visual changes
 
-For UI or rendering work, confirm the following manually:
-
-1. One tract toggle changes one tract.
-2. The global tract toggle changes all tracts.
-3. Slice toggles remain independent.
-4. Active-tract controls remain associated with the selected tract.
-5. Line mode has no visible nodes.
-6. Anatomical view buttons preserve laterality and alternate viewing side.
-7. Camera reset works after perspective interaction.
-8. Reset-active changes one tract.
-9. Reset-all restores the complete initial scene promptly.
-10. Scene saving produces reloadable JSON.
-11. PNG export has the requested dimensions.
-12. The orientation guide is absent from exported PNGs.
-13. Controls remain usable at ordinary laptop viewport sizes.
-
 Generate the reference-render set when renderer behavior changes:
 
 ```bash
@@ -634,9 +552,6 @@ On headless Linux:
 xvfb-run -a python scripts/render_reference_scenes.py
 ```
 
-Discuss intentional reference-image changes with the issue lead before
-committing them.
-
 ## 14. Push and open a pull request
 
 Push the issue branch:
@@ -647,41 +562,13 @@ git push -u origin issue-<NUMBER>-<SHORT-NAME>
 
 Open a pull request into `main`. Include:
 
-- the linked issue number
 - a concise summary of behavior changes
 - files or architectural components affected
 - tests run locally
-- Windows/macOS/Linux compatibility considerations
-- screenshots for UI or rendering work
-- recipe/schema migration details when applicable
-- known limitations
+- Windows/macOS/Linux compatibility considerations, if applicable
+- a screenshot to two for UI or rendering work
 
-GitHub Actions runs the suite on:
-
-- Ubuntu Linux
-- Windows
-- macOS Apple Silicon
-- macOS Intel
-
-All required jobs must pass. Review failed-job logs and update the same branch;
-new commits automatically update its pull request.
-
-## 15. Pull-request checklist
-
-- [ ] The issue acceptance criteria are met.
-- [ ] Scientific coordinate and transform contracts are preserved.
-- [ ] Original data remain unchanged.
-- [ ] New behavior has automated coverage.
-- [ ] Ruff passes.
-- [ ] Non-integration tests pass.
-- [ ] Relevant integration tests pass.
-- [ ] Manual visual checks pass when applicable.
-- [ ] Recipes use portable paths.
-- [ ] Generated caches and routine outputs are absent from Git.
-- [ ] Documentation describes user-visible behavior.
-- [ ] Four-platform GitHub Actions checks pass.
-
-## 16. Common problems
+## 15. Common problems
 
 ### `.venv/Scripts/activate` is missing on Windows
 
@@ -711,17 +598,6 @@ unset VIRTUAL_ENV
 Activate the repository environment again using the command for the current
 platform.
 
-### Port 8080 is occupied
-
-Use `--app-port 8081` or another available unprivileged port.
-
-### The verification report is missing
-
-```bash
-python scripts/fetch_demo_data.py
-python scripts/verify_demo_data.py
-```
-
 ### A legacy VTK/FIB tract reports low relative confidence
 
 Read the complete inspection report. The verifier requires the selected
@@ -730,7 +606,7 @@ least 0.80, produce RASMM coordinates, overlap the reference bounds, and place
 tract points inside the reference. Relative ambiguity remains visible as a
 warning.
 
-### MobaXTerm prints garbled progress characters
+### MobaXTerm prints "weird" or garbled characters
 
 Set:
 
@@ -738,9 +614,7 @@ Set:
 export UV_NO_PROGRESS=1
 ```
 
-This affects terminal display only.
-
-## 17. Official references
+## 16. Official references
 
 - uv installation: <https://docs.astral.sh/uv/getting-started/installation/>
 - uv project synchronization: <https://docs.astral.sh/uv/concepts/projects/sync/>
