@@ -1,31 +1,16 @@
 # TractFigure Studio
 
-Figure-oriented tractography visualization and registration starter for a
-cross-platform student hackathon.
+Figure-oriented tractography visualization and registration starter for Vanderbilt BrainHack 2026.
 
 The validated runtime is CPython 3.12. The committed `uv.lock` resolves native
-wheels for Windows, macOS Apple Silicon, macOS Intel, and Linux. VTK is held at
-9.3.x because FURY 0.12 requires VTK below 9.4.
+wheels for Windows, macOS Apple Silicon, macOS Intel, and Linux.
 
 ## Start here
 
-Follow `PREHACKATHON_GUIDE.md` from beginning to end. It contains:
-
-- Windows/MobaXTerm, macOS, and Linux installation commands
-- the exact order for replacing and adding bundle files
-- data download and verification
-- unit, integration, registration, rendering, and CI gates
-- reference-render and release procedures
-- the prepared hackathon issue set
+To begin, please follow the instructions in `PREHACKATHON_GUIDE.md` from beginning to end.
 
 The stable coordinate, transform-direction, scene-state, and rendering rules are
 summarized in `docs/ARCHITECTURE.md`.
-
-Do not rename the canonical v1 modules. In particular, keep:
-
-- `src/tractfigure/scene_state_v1_20260730.py`
-- `src/tractfigure/renderer_trame_v1_20260730.py`
-- `src/tractfigure/gui/app_trame_v1_20260730.py`
 
 ## After installing and activating the environment
 
