@@ -610,6 +610,10 @@ The workflow pins `macos-15` instead of `macos-latest` so a hosted-image migrati
 does not silently change the baseline. It uses the frozen lockfile and invokes
 the environment's Python directly.
 
+The uv setup action is pinned to the immutable commit for `setup-uv` v9.0.0.
+Current setup-uv releases no longer publish moving major tags such as `@v8`, so
+the workflow must retain the complete action commit SHA.
+
 Because no physical Mac is available, require both macOS jobs to pass before
 tagging the starter. CI is the compatibility test, not a claim that macOS works
 without evidence. If one Mac architecture fails, retain its job, open the full
