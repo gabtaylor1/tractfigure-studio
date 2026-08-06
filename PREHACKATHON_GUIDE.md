@@ -416,24 +416,6 @@ state, camera, layer order, colors, opacity, canvas size, and output names;
 relative paths resolve through a configurable data root; invalid recipes fail
 before rendering; a manifest records software versions and input provenance.
 
-### `testing`: coordinate and rendering validation
-
-**Goal.** Expand confidence to cover realistic edge cases.
-
-**Starting point.** The suite covers automatic source-space detection, origin
-shifts, world bounds, scene/controller state, independent actors, registration
-direction, offscreen output, and four-platform CI.
-
-**Work.** Add adversarial coordinate fixtures, oblique affines, malformed
-files, larger layer counts, camera round-trips, transparency cases, and
-stateful UI regressions. Keep fixtures small and generate them when practical.
-
-**Relevant files.** `tests/`, `src/tractfigure/io.py`,
-`src/tractfigure/vtk_conversion.py`, and the scene/renderer/app modules.
-
-**Acceptance criteria.** Failures have actionable messages; fixtures are small
-and licensed or generated; the complete CI matrix stays green.
-
 ### `stretch`: video, nonlinear registration, or DSI `.tt.gz`
 
 **Goal.** These are the really "out-there" features! 
