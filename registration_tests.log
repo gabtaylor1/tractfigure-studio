@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0 -- /Users/danielgarcia-barnett/Desktop/Coding/Vandy/BrainHack/tractfigure-studio/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/danielgarcia-barnett/Desktop/Coding/Vandy/BrainHack/tractfigure-studio
+configfile: pyproject.toml
+collecting ... collected 7 items
+
+tests/test_registration.py::test_identity_preserves_streamlines PASSED   [ 14%]
+tests/test_registration.py::test_known_affine_maps_moving_points_to_fixed PASSED [ 28%]
+tests/test_registration.py::test_resampled_image_uses_fixed_geometry PASSED [ 42%]
+tests/test_registration.py::test_affine_registration_improves_alignment PASSED [ 57%]
+tests/test_registration.py::test_generated_registration_fixtures PASSED  [ 71%]
+tests/test_registration.py::test_rigid_registration_mode PASSED          [ 85%]
+tests/test_registration.py::test_invalid_mode_raises_value_error PASSED  [100%]
+
+============================== 7 passed in 1.76s ===============================

@@ -205,14 +205,6 @@
         "sha256": "fabaaac4bcbf381a7e241e55b9cdd7df3d19844a583fe37bdaaf570fa3e41a6a"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_L.trk",
-        "sha256": "b9272c35000b54d1c74036eee7bf00dd75df4177232c0c9f8e22af268cd3ac8e"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_R.trk",
-        "sha256": "fbf591ffdbc7bb42c20297d765c53e6ed31f7308d3b246b351bee4a1baa72a45"
-      },
-      {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CB_L.trk",
         "sha256": "c0d8cbe76cabb4ed6b54b20731f9b13d73c082e97a9787bb9fcbcd8a23bfa302"
       },
@@ -225,24 +217,16 @@
         "sha256": "ecfe2bb8aaee7f3551a3b35b7c73ea91346d38250a13147ad33ff9dc214d07f7"
       },
       {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CCMid.trk",
+        "sha256": "99665ccceb4951e6a8862722b0e08f81fa36cf3f3ede65d2c4063ecf45a364eb"
+      },
+      {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CC_ForcepsMajor.trk",
         "sha256": "5b64d1b1d284ef39287f471c4737206f031a7a1ddb9126f1c293239d10dea15a"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CC_ForcepsMinor.trk",
         "sha256": "2b3681b7edd94397eaf413d75319c685bf4c6293546b4fb078a26151900b6927"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CCMid.trk",
-        "sha256": "99665ccceb4951e6a8862722b0e08f81fa36cf3f3ede65d2c4063ecf45a364eb"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_L.trk",
-        "sha256": "190d7801368abe30f812b95fecf75c2ac9612b2b60bd6930db84aabf83d00323"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_R.trk",
-        "sha256": "6b238ab0a951468ff02b4b9d4668ad25f14cfcc29c4e98e6a3aaaac6bb6fc27e"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIII_L.trk",
@@ -253,28 +237,20 @@
         "sha256": "7178bef167f2e1123752059f46d0b1f48374566ef4aef65316e25178abb74518"
       },
       {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_L.trk",
+        "sha256": "190d7801368abe30f812b95fecf75c2ac9612b2b60bd6930db84aabf83d00323"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNII_R.trk",
+        "sha256": "6b238ab0a951468ff02b4b9d4668ad25f14cfcc29c4e98e6a3aaaac6bb6fc27e"
+      },
+      {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIV_L.trk",
         "sha256": "bbfea724dc5adeb238ca760f8a3be6658d559a122312eb6a751d32044614d063"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNIV_R.trk",
         "sha256": "a0671f791a64f9ec51c0839383867b5e294e1ced945e200eee0685f64bebdc50"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_L.trk",
-        "sha256": "a254a570eb9ecda960cc4da1f298d696006ecbd00fc70f64bd9edefe39d482b3"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_R.trk",
-        "sha256": "3311843a36fce2fb5a678ae11174713d107dd0a9002b63e303231157950846b5"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_L.trk",
-        "sha256": "4b0e52134d72ce240f18bf70810794bc7d8cee22d29bc576f0cf2147193ddcb1"
-      },
-      {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_R.trk",
-        "sha256": "f68f8786c6b0428750275ca15a8193761f33c1ec877491c64f243baae0440dae"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVIII_L.trk",
@@ -285,12 +261,20 @@
         "sha256": "15aabaaef53ee5989022c577cbadfecde2d26ed5a5a5b6692c7ea5d8cd5b8dcc"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_L.trk",
-        "sha256": "25752484f9718a8d3ae800b397c2148bee8e73684166403df7de8073fc4eb644"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_L.trk",
+        "sha256": "4b0e52134d72ce240f18bf70810794bc7d8cee22d29bc576f0cf2147193ddcb1"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_R.trk",
-        "sha256": "445a2b3c3f328a287c4c63f03c2f87f9cb1d604282594599121c27d020ba7878"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNVII_R.trk",
+        "sha256": "f68f8786c6b0428750275ca15a8193761f33c1ec877491c64f243baae0440dae"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_L.trk",
+        "sha256": "a254a570eb9ecda960cc4da1f298d696006ecbd00fc70f64bd9edefe39d482b3"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CNV_R.trk",
+        "sha256": "3311843a36fce2fb5a678ae11174713d107dd0a9002b63e303231157950846b5"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CST_L.trk",
@@ -301,12 +285,12 @@
         "sha256": "9efdbf923f7d837a5895fc133b8a14f02dfa7209952368329bbd8f5e3dd14fc7"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_L.trk",
-        "sha256": "8f61ae6fd8efc65e02e17ebb411c701ba5394b03bf49ef849aa75159e0146202"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_L.trk",
+        "sha256": "25752484f9718a8d3ae800b397c2148bee8e73684166403df7de8073fc4eb644"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_R.trk",
-        "sha256": "11ee37166c92aaaa1fb6fe8de060fc8e19a1ed0452a2f57d948a5b6cc4eac633"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CS_R.trk",
+        "sha256": "445a2b3c3f328a287c4c63f03c2f87f9cb1d604282594599121c27d020ba7878"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CTT_L.trk",
@@ -315,6 +299,22 @@
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CTT_R.trk",
         "sha256": "6aab2c82cff410138736a38b2a3a099faf40fdd29a83990f2005d609212ba321"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_L.trk",
+        "sha256": "8f61ae6fd8efc65e02e17ebb411c701ba5394b03bf49ef849aa75159e0146202"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/CT_R.trk",
+        "sha256": "11ee37166c92aaaa1fb6fe8de060fc8e19a1ed0452a2f57d948a5b6cc4eac633"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_L.trk",
+        "sha256": "b9272c35000b54d1c74036eee7bf00dd75df4177232c0c9f8e22af268cd3ac8e"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/C_R.trk",
+        "sha256": "fbf591ffdbc7bb42c20297d765c53e6ed31f7308d3b246b351bee4a1baa72a45"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/DLF_L.trk",
@@ -333,16 +333,16 @@
         "sha256": "c0573567076f5ab18e01fabb0eab31dfec21d6e419168775bdb16d7eb18c47ee"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/F_L_R.trk",
-        "sha256": "1478aa863b81d35f9302499773582012bc9ca0c5ea62e50b0eeee29e83070f60"
-      },
-      {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/FPT_L.trk",
         "sha256": "73b1eb7f3f908887ee21163c1dc7d12d06d74ab852be2c63b53aba2b910c744a"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/FPT_R.trk",
         "sha256": "bbbee6a47075a0afb9fe0399183a48fb0146e07b1bdfd04268565b1e15e5f16c"
+      },
+      {
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/F_L_R.trk",
+        "sha256": "1478aa863b81d35f9302499773582012bc9ca0c5ea62e50b0eeee29e83070f60"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ICP_L.trk",
@@ -385,12 +385,12 @@
         "sha256": "7e330f6a91ca0ecffb0c9235ee4a539b67e9bcf12519e5c1adb5764798e2f020"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_L.trk",
-        "sha256": "cf6719840a256b2282a185fbff028cbe257bafa9c9c06250f61e8a9f54cf00a8"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_L.trk",
+        "sha256": "8d50a9915e501f34a4c30e893261be2f4a4927c215a51b5aee54754a5be6981e"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_R.trk",
-        "sha256": "247245f58d2c7075f0d79c438317abfff8ce52c2889a602542b0306a99035856"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_R.trk",
+        "sha256": "8522c31532941fbdc8d10a088e80208fa6b7464c1a8d18dda554d5f7da8bb1a5"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/ML_L.trk",
@@ -401,12 +401,12 @@
         "sha256": "3ac91eaf9d18fc68a82128d9cc260f0f153fd5b67a318f70bcee29ec17b8faaa"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_L.trk",
-        "sha256": "8d50a9915e501f34a4c30e893261be2f4a4927c215a51b5aee54754a5be6981e"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_L.trk",
+        "sha256": "cf6719840a256b2282a185fbff028cbe257bafa9c9c06250f61e8a9f54cf00a8"
       },
       {
-        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MLF_R.trk",
-        "sha256": "8522c31532941fbdc8d10a088e80208fa6b7464c1a8d18dda554d5f7da8bb1a5"
+        "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/MdLF_R.trk",
+        "sha256": "247245f58d2c7075f0d79c438317abfff8ce52c2889a602542b0306a99035856"
       },
       {
         "path": "demo_data/cache/bundle_atlas_hcp842/Atlas_80_Bundles/bundles/OPT_L.trk",

@@ -16,7 +16,10 @@ dependencies = [
     "nibabel>=5.2,<6",
     "numpy>=1.26,<3",
     "pydantic>=2.8,<3",
+    "pyvista>=0.48.4",
+    "ruff>=0.16.1",
     "scipy>=1.13,<2",
+    "trame>=3.13.2",
 ]
 
 [project.optional-dependencies]

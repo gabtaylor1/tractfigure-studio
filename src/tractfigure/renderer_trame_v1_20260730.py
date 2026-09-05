@@ -5,7 +5,7 @@ import json
 import os
 import re
 from collections.abc import Callable
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,10 @@ import pyvista as pv
 from PIL import Image, ImageOps
 
 from tractfigure.io import load_tract_layer
+from tractfigure.registration import (
+    apply_affine_to_streamlines,
+    register_affine,
+)
 from tractfigure.scene_state_v1_20260730 import (
     CameraState,
     ImageLayerState,
@@ -503,6 +507,46 @@ class SceneRenderer:
         if tract_state.render_mode == "tube":
             self._replace_tract_actor(tract_state)
             self._refresh()
+
+    def register_tracts(
+        self,
+        moving_image_path: Path,
+        mode: str,
+    ) -> None:
+        scene = self._require_scene()
+        moving_image = nib.load(str(Path(moving_image_path).expanduser().resolve()))
+        fixed_image = nib.load(str(Path(scene.image.path).expanduser().resolve()))
+        moving_to_fixed = register_affine(
+            moving_image,
+            fixed_image,
+            mode=mode,
+        )
+
+        for tract_state in scene.tracts:
+            layer = self.layers_by_id[tract_state.id]
+            transformed = apply_affine_to_streamlines(
+                layer.streamlines,
+                moving_to_fixed,
+            )
+            self.layers_by_id[tract_state.id] = replace(
+                layer,
+                streamlines=transformed,
+            )
+            line_mesh = streamlines_to_polydata(
+                transformed,
+                max_streamlines=tract_state.max_streamlines,
+            )
+            line_mesh.verts = np.empty(0, dtype=np.int64)
+            self.line_meshes_by_id[tract_state.id] = line_mesh
+
+            keys_to_remove = [
+                key for key in self.tube_meshes_by_key if key[0] == tract_state.id
+            ]
+            for key in keys_to_remove:
+                self.tube_meshes_by_key.pop(key, None)
+            self._replace_tract_actor(tract_state)
+
+        self._refresh()
 
     def set_image_visible(self, visible: bool) -> None:
         scene = self._require_scene()
