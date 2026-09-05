@@ -6,7 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
-from dipy.align import affine_registration
+from dipy.align import affine, affine_registration
 from nibabel.affines import apply_affine
 from scipy.ndimage import affine_transform
 
@@ -45,6 +45,7 @@ def register_affine(
     moving: nib.spatialimages.SpatialImage,
     fixed: nib.spatialimages.SpatialImage,
     *,
+    mode: Literal["rigid", "affine"] = "affine",
     level_iters: Sequence[int] = (1000, 500, 100),
     sigmas: Sequence[float] = (3.0, 1.0, 0.0),
     factors: Sequence[int] = (4, 2, 1),
@@ -54,12 +55,19 @@ def register_affine(
     moving = _as_3d_image(moving, "Moving")
     fixed = _as_3d_image(fixed, "Fixed")
 
+    if mode in ["rigid", "affine"]:
+        pipeline = ["center_of_mass", "translation", "rigid"]
+        if mode == "affine":
+            pipeline.append("affine")
+    else:
+        raise ValueError(f"Invalid registration mode: {mode}. Expected 'rigid' or 'affine'.")
+
     _transformed, fixed_to_moving = affine_registration(
         np.asarray(moving.dataobj, dtype=np.float32),
         np.asarray(fixed.dataobj, dtype=np.float32),
         moving_affine=np.asarray(moving.affine, dtype=float),
         static_affine=np.asarray(fixed.affine, dtype=float),
-        pipeline=["center_of_mass", "translation", "rigid", "affine"],
+        pipeline=pipeline,
         metric="MI",
         level_iters=list(level_iters),
         sigmas=list(sigmas),

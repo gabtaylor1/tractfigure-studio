@@ -11,7 +11,6 @@ from tractfigure.registration import (
     resample_image_to_fixed,
 )
 
-
 def asymmetric_image() -> nib.Nifti1Image:
     data = np.zeros((32, 32, 32), dtype=np.float32)
     data[5:12, 7:16, 9:18] = 1.0
@@ -101,3 +100,31 @@ def test_generated_registration_fixtures() -> None:
         matrix = np.loadtxt(case_directory / "ground_truth_moving_to_fixed.txt")
         assert matrix.shape == (4, 4)
         assert np.isfinite(matrix).all()
+
+@pytest.mark.registration
+def test_rigid_registration_mode() -> None:
+    fixed = asymmetric_image()
+    fixed_to_moving = np.eye(4)
+    fixed_to_moving[:3, 3] = (2.0, -1.0, 1.0)
+    moving = resample_image_to_fixed(fixed, fixed, fixed_to_moving)
+    
+    moving_to_fixed = register_affine(
+        moving,
+        fixed,
+        mode="rigid",
+        level_iters=(100, 50, 20),
+        sigmas=(2.0, 1.0, 0.0),
+        factors=(4, 2, 1),
+    )
+    
+    # Rigid matrix top-left 3x3 must be an orthogonal rotation matrix (det close to 1)
+    det = np.linalg.det(moving_to_fixed[:3, :3])
+    assert np.isclose(det, 1.0, atol=1e-3)
+
+
+@pytest.mark.registration
+def test_invalid_mode_raises_value_error() -> None:
+    fixed = asymmetric_image()
+    moving = asymmetric_image()
+    with pytest.raises(ValueError, match="Invalid registration mode"):
+        register_affine(moving, fixed, mode="invalid_mode")
