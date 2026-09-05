@@ -130,3 +130,7 @@ class SceneState(BaseModel):
                 return tract
 
         raise KeyError(f"Unknown tract layer ID: {layer_id}")
+
+class RegistrationState(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+    mode: Literal["rigid", "affine"] = "rigid"

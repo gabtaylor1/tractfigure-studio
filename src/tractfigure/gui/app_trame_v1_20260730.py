@@ -276,6 +276,7 @@ class TractFigureController:
         server: Any,
         renderer: SceneRenderer,
         output_directory: Path,
+        moving_image_path: Path | None = None,
     ) -> None:
         self.server = server
         self.state = server.state
@@ -283,6 +284,11 @@ class TractFigureController:
         self.renderer = renderer
         self.scene = renderer._require_scene()
         self.output_directory = output_directory.resolve()
+        self.moving_image_path = (
+            moving_image_path.expanduser().resolve()
+            if moving_image_path is not None
+            else None
+        )
         self.view: Any | None = None
 
         self.visibility_keys: dict[str, str] = {}
@@ -306,6 +312,7 @@ class TractFigureController:
 
         self.state.trame__title = "TractFigure Studio"
         self.state.render_mode_items = ["tube", "line"]
+        self.state.registration_mode_items = ["rigid", "affine"]
 
         self.state.reference_visible = self.scene.image.visible
         self.state.slice_opacity = self.scene.image.opacity
@@ -327,6 +334,8 @@ class TractFigureController:
         self.state.axial_max = image_shape[2] - 1
 
         self.state.all_tracts_visible = all(tract.visible for tract in self.scene.tracts)
+
+        self.state.registration_mode = "rigid"
 
         for index, tract in enumerate(self.scene.tracts):
             visibility_key = f"layer_visible_{index}"
@@ -413,6 +422,7 @@ class TractFigureController:
         self.ctrl.reset_camera = self.reset_camera
         self.ctrl.reset_active_tract_settings = self.reset_active_tract_settings
         self.ctrl.reset_all_settings = self.reset_all_settings
+        self.ctrl.run_registration = self.run_registration
         self.ctrl.view_perspective = self.view_perspective
         self.ctrl.view_sagittal = self.view_sagittal
         self.ctrl.view_coronal = self.view_coronal
@@ -1121,6 +1131,30 @@ class TractFigureController:
         self._synchronize_camera_to_view()
         self.state.status_message = f"{plane.capitalize()} view: {side.capitalize()}"
 
+    def run_registration(self) -> None:
+        mode = str(self.state.registration_mode)
+
+        if mode not in self.state.registration_mode_items:
+            self.state.status_message = f"Registration failed: unsupported mode '{mode}'"
+            return
+
+        if self.moving_image_path is None:
+            self.state.status_message = (
+                "Registration failed: provide --moving-image to enable registration"
+            )
+            return
+
+        try:
+            self.renderer.register_tracts(self.moving_image_path, mode)
+        except Exception as error:
+            self.state.status_message = (
+                f"Registration failed: {type(error).__name__}: {error}"
+            )
+            return
+
+        self.update_view()
+        self.state.status_message = f"{mode.capitalize()} registration completed"
+
     def view_sagittal(self) -> None:
         self._set_anatomical_view("sagittal")
 
@@ -1683,6 +1717,33 @@ def build_ui(
                 )
 
                 v3.VDivider(classes="my-3")
+                v3.VCardTitle("Registration")
+
+                v3.VSelect(
+                    label="Mode",
+                    v_model=(
+                        "registration_mode",
+                        controller.state.registration_mode,
+                    ),
+                    items=(
+                        "registration_mode_items",
+                        controller.state.registration_mode_items,
+                    ),
+                    hide_details=True,
+                    density="compact",
+                    variant="outlined",
+                    classes="mb-3",
+                )
+
+                v3.VBtn(
+                    "Run Registration",
+                    prepend_icon="mdi-play",
+                    click=ctrl.run_registration,
+                    color="primary",
+                    block=True,
+                )
+
+                v3.VDivider(classes="my-3")
                 v3.VCardTitle("Scene settings")
 
                 with v3.VSheet(
@@ -1755,6 +1816,11 @@ def configure_cli() -> argparse.Namespace:
         type=Path,
     )
     parser.add_argument(
+        "--moving-image",
+        type=Path,
+        help="Moving DWI image to register to the reference image.",
+    )
+    parser.add_argument(
         "--tractogram",
         type=Path,
         action="append",
@@ -1780,9 +1846,13 @@ def configure_cli() -> argparse.Namespace:
 
 
 def scene_from_cli(args: Any) -> SceneState:
+    moving_image = getattr(args, "moving_image", None)
+
     if args.recipe is not None:
-        if args.reference is not None or args.tractogram:
-            raise ValueError("--recipe cannot be combined with --reference or --tractogram")
+        if args.reference is not None or moving_image is not None or args.tractogram:
+            raise ValueError(
+                "--recipe cannot be combined with --reference, --moving-image, or --tractogram"
+            )
 
         return load_recipe(args.recipe)
 
@@ -1827,6 +1897,7 @@ def main() -> None:
         server,
         renderer,
         args.output_dir.expanduser().resolve(),
+        moving_image_path=args.moving_image,
     )
     build_ui(server, controller)
 
