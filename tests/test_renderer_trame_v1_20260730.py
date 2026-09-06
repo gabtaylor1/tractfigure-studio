@@ -15,10 +15,19 @@ import pyvista as pv
 from nibabel.affines import apply_affine
 from PIL import Image
 
-from tractfigure.renderer_trame_v1_20260730 import SceneRenderer, image_transform
+from tractfigure.renderer_trame_v1_20260730 import (
+    LIGHT_RIGS,
+    LIGHTING_PRESETS,
+    OUTLINE_DISCARD,
+    OUTLINE_SHADER,
+    SceneRenderer,
+    image_transform,
+    lighting_fragment_shader,
+)
 from tractfigure.scene_state_v1_20260730 import (
     CanvasState,
     ImageLayerState,
+    LightingState,
     MeshLayerState,
     SceneState,
     TractLayerState,
@@ -232,3 +241,163 @@ def test_image_transform_is_identity_by_default_and_pivots_on_centre() -> None:
     np.testing.assert_allclose(
         apply_affine(matrix, pivot + [1.0, 0.0, 0.0]), pivot + [1.0, 2.0, 0.0], atol=1e-12
     )
+
+
+def write_tetrahedron_gifti(path: Path) -> Path:
+    vertices = np.array([[0, 0, 0], [10, 0, 0], [0, 10, 0], [0, 0, 10]], dtype=np.float32)
+    faces = np.array([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]], dtype=np.int32)
+    gifti = nib.gifti.GiftiImage()
+    gifti.add_gifti_data_array(nib.gifti.GiftiDataArray(vertices, intent="NIFTI_INTENT_POINTSET"))
+    gifti.add_gifti_data_array(nib.gifti.GiftiDataArray(faces, intent="NIFTI_INTENT_TRIANGLE"))
+    nib.save(gifti, path)
+    return path
+
+
+def test_lighting_fragment_shader_covers_every_preset() -> None:
+    assert LIGHTING_PRESETS[0] == "default"
+    assert set(LIGHTING_PRESETS[1:]) == set(LIGHT_RIGS)
+
+    # "default" leaves VTK's shared light kit in charge, so there is nothing to inject.
+    assert lighting_fragment_shader(LightingState()) is None
+    assert lighting_fragment_shader(LightingState(), outline=True) == OUTLINE_SHADER
+
+    three_point = lighting_fragment_shader(LightingState(preset="three_point"))
+    assert three_point is not None
+    assert three_point.count("vec3 lightDir") == len(LIGHT_RIGS["three_point"]) == 3
+    assert "fragOutput0" in three_point
+
+    # The outline silhouette test composes with the rig rather than replacing it.
+    outlined = lighting_fragment_shader(LightingState(preset="three_point"), outline=True)
+    assert outlined is not None
+    assert outlined.startswith(OUTLINE_DISCARD)
+    assert outlined.endswith(three_point)
+
+    # Intensity scales every light; "flat" is unlit, so it has no dot products.
+    bright = lighting_fragment_shader(LightingState(preset="headlight", intensity=2.0))
+    assert bright is not None and "2.0000 * lightDot" in bright
+    flat = lighting_fragment_shader(LightingState(preset="flat", intensity=0.8))
+    assert flat is not None and "lightDot" not in flat and "0.8000" in flat
+
+
+def test_renderer_lights_mesh_and_tracts_independently(tmp_path: Path) -> None:
+    reference, _affine = make_reference(tmp_path)
+    mesh_path = write_tetrahedron_gifti(tmp_path / "brain.gii")
+
+    scene = make_scene(reference)
+    scene.image.visible = False
+    scene.mesh = MeshLayerState(path=mesh_path, opacity=1.0)
+    renderer = SceneRenderer(
+        pv.Plotter(off_screen=True, window_size=(320, 240)),
+        layer_loader=lambda path, reference_path=None, *, name=None: FakeLayer(
+            (np.array([[-10, -10, -10], [0, 0, 0], [8, 8, 8]], dtype=np.float32),)
+        ),
+    )
+    windows_ci = sys.platform == "win32" and os.getenv("GITHUB_ACTIONS") == "true"
+
+    def replacement_counts() -> tuple[int, list[int]]:
+        return (
+            renderer.mesh_actor.GetShaderProperty().GetNumberOfShaderReplacements(),
+            [
+                actor.GetShaderProperty().GetNumberOfShaderReplacements()
+                for actor in renderer.actors_by_id.values()
+            ],
+        )
+
+    try:
+        scene = renderer.load_scene(scene)
+
+        # Nothing is injected until a preset is chosen.
+        assert scene.lighting.mesh.preset == "default"
+        assert replacement_counts() == (0, [0, 0])
+
+        renderer.set_mesh_lighting(preset="three_point", intensity=1.4)
+        assert scene.lighting.mesh.preset == "three_point"
+        assert scene.lighting.mesh.intensity == pytest.approx(1.4)
+        # Lighting the glass brain must leave the tracts on the default rig.
+        assert scene.lighting.tracts.preset == "default"
+        assert replacement_counts() == (1, [0, 0])
+
+        renderer.set_tract_lighting(preset="rim")
+        assert scene.lighting.tracts.preset == "rim"
+        assert scene.lighting.mesh.preset == "three_point"
+        assert replacement_counts() == (1, [1, 1])
+
+        # A tract added afterwards picks up the rig already in force.
+        added = TractLayerState(
+            id="tract-c",
+            name="Tract C",
+            path=reference.parent / "c.trk",
+            color="#00A087",
+        )
+        scene.tracts.append(added)
+        renderer.add_tract(added)
+        assert replacement_counts() == (1, [1, 1, 1])
+        renderer.remove_tract("tract-c")
+
+        # Every preset must compile and produce a distinct image.
+        if not windows_ci:
+            renderer._capture_png(io.BytesIO(), 320, 240)  # warm up the GL context
+            renders: dict[str, np.ndarray] = {}
+
+            for preset in LIGHTING_PRESETS:
+                renderer.set_mesh_lighting(preset=preset)
+                renders[preset] = renderer._capture_png(io.BytesIO(), 320, 240)
+
+            for preset, image in renders.items():
+                if preset == "default":
+                    continue
+                assert not np.array_equal(renders["default"], image), preset
+
+        renderer.set_mesh_lighting(preset="soft")
+        renderer.set_mesh_shader("outline")
+        # Outline and lighting share one replacement slot.
+        assert replacement_counts()[0] == 1
+
+        renderer.set_mesh_lighting(preset="default")
+        assert replacement_counts()[0] == 1  # still outlined
+        renderer.set_mesh_shader("phong")
+        assert replacement_counts()[0] == 0
+    finally:
+        renderer.close()
+
+
+def test_lighting_survives_save_and_reset(tmp_path: Path) -> None:
+    reference, _affine = make_reference(tmp_path)
+    mesh_path = write_tetrahedron_gifti(tmp_path / "brain.gii")
+
+    scene = make_scene(reference)
+    scene.mesh = MeshLayerState(path=mesh_path)
+    renderer = SceneRenderer(
+        pv.Plotter(off_screen=True, window_size=(320, 240)),
+        layer_loader=lambda path, reference_path=None, *, name=None: FakeLayer(
+            (np.array([[0, 0, 0], [5, 5, 5]], dtype=np.float32),)
+        ),
+    )
+
+    try:
+        scene = renderer.load_scene(scene)
+        initial = scene.model_copy(deep=True)
+
+        renderer.set_mesh_lighting(preset="rim", ambient=0.4)
+        renderer.set_tract_lighting(preset="soft", specular=0.9)
+
+        saved = json.loads(renderer.save_scene(tmp_path / "scene.json").read_text())
+        assert saved["lighting"]["mesh"] == {
+            "preset": "rim",
+            "intensity": 1.0,
+            "ambient": 0.4,
+            "specular": 0.3,
+        }
+        assert saved["lighting"]["tracts"]["preset"] == "soft"
+        assert saved["lighting"]["tracts"]["specular"] == pytest.approx(0.9)
+
+        restored = renderer.restore_scene_settings(initial)
+        assert restored.lighting.mesh.preset == "default"
+        assert restored.lighting.tracts.preset == "default"
+        assert renderer.mesh_actor.GetShaderProperty().GetNumberOfShaderReplacements() == 0
+        assert all(
+            actor.GetShaderProperty().GetNumberOfShaderReplacements() == 0
+            for actor in renderer.actors_by_id.values()
+        )
+    finally:
+        renderer.close()

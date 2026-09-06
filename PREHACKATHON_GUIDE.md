@@ -608,6 +608,59 @@ python -m tractfigure.gui.app_trame_v1_20260730 \
   are not re-registered. Use `src/tractfigure/registration.py` to apply the
   same matrix to streamlines when that is needed.
 
+### Validate the independent lighting rigs
+
+The **Lighting** section of the drawer carries two rigs: one for the glass
+brain and one for every tract. VTK lights belong to the whole renderer, so a
+shared light kit cannot light two groups differently; instead each preset is
+compiled into a per-actor fragment shader (`lighting_fragment_shader` in
+`src/tractfigure/renderer_trame_v1_20260730.py`) that replaces
+`//VTK::Light::Impl` on that group's actors only.
+
+Presets, all defined in view space so they follow the camera:
+
+| Preset | Rig |
+| --- | --- |
+| `default` | VTK's shared light kit; no shader is injected |
+| `headlight` | one lamp on the camera axis - even and shadowless |
+| `three_point` | key, dim fill and back light - the standard figure rig |
+| `rim` | two back lights against a token key - bright edges, dark body |
+| `soft` | a broad, near-matte pair that keeps shading off the layer colours |
+| `flat` | unlit; the layer colour, flat |
+
+**Intensity** scales every light in the rig. **Ambient** and **Specular** are
+hidden for `default` (VTK is in charge) and for `flat` (unlit), and the whole
+glass-brain group is hidden until a recipe or `--mesh` supplies a surface. The
+two rigs are saved under `lighting.mesh` and `lighting.tracts` in the recipe,
+and **Reset all settings** returns both to `default`.
+
+Automated check:
+
+```bash
+python -m pytest tests/test_renderer_trame_v1_20260730.py -k lighting
+python -m pytest tests/test_app_trame_v1_20260730.py -k lighting
+```
+
+Visual check:
+
+```bash
+python -m tractfigure.gui.app_trame_v1_20260730 \
+  --recipe examples/recipes/dsi_tinytrack.json --output-dir outputs
+```
+
+- Set **Glass brain lighting -> Preset** to `three_point` and leave the tracts
+  on `default`: the cortex gains a key highlight on the upper left and a back
+  edge, while the bundle's shading does not change. That is the independence
+  the two rigs are for.
+- Set **Tract lighting -> Preset** to `flat`: the bundle becomes an unshaded
+  block of its own colour, useful when tube shading is competing with a
+  colour-coded figure legend. The cortex keeps its three-point rig.
+- Set the tracts to `rim` and raise **Intensity**: the tubes darken except at
+  their silhouettes, which reads well against a light background.
+- `outline` composes with the glass brain's rig: the silhouette test still
+  discards the front and back faces, and the surviving band is shaded by the
+  chosen preset rather than by the fixed NiiVue lighting.
+
 ## 14. Push and open a pull request
 
 Push the issue branch:

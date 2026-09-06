@@ -76,6 +76,41 @@ class ImageLayerState(BaseModel):
         return self
 
 
+class LightingState(BaseModel):
+    """Lighting rig for one group of actors (the glass brain, or every tract)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+    )
+
+    # "default" keeps VTK's shared light kit; every other preset is a view-space
+    # rig applied to this group alone, so the two groups can be lit differently.
+    preset: Literal[
+        "default",
+        "headlight",
+        "three_point",
+        "rim",
+        "soft",
+        "flat",
+    ] = "default"
+    intensity: float = Field(default=1.0, ge=0.0, le=3.0)
+    ambient: float = Field(default=0.15, ge=0.0, le=1.0)
+    specular: float = Field(default=0.3, ge=0.0, le=1.0)
+
+
+class SceneLightingState(BaseModel):
+    """Independent lighting rigs for the glass brain and the tracts."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+    )
+
+    mesh: LightingState = Field(default_factory=LightingState)
+    tracts: LightingState = Field(default_factory=LightingState)
+
+
 class MeshLayerState(BaseModel):
     """Translucent cortical surface (GIFTI) drawn over the tracts as a glass brain."""
 
@@ -144,6 +179,7 @@ class SceneState(BaseModel):
     active_layer_id: str | None = None
     camera: CameraState | None = None
     canvas: CanvasState = Field(default_factory=CanvasState)
+    lighting: SceneLightingState = Field(default_factory=SceneLightingState)
 
     @model_validator(mode="after")
     def validate_layer_identity(self) -> SceneState:

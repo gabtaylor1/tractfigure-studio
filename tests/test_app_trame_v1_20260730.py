@@ -23,6 +23,7 @@ from tractfigure.morphology_niimath_v1_20260905 import NiimathError
 from tractfigure.scene_state_v1_20260730 import (
     CameraState,
     ImageLayerState,
+    LightingState,
     MeshLayerState,
     SceneState,
     TractLayerState,
@@ -51,6 +52,7 @@ class FakeRenderer:
         self.scene = scene
         self.image_shape = (8, 9, 10)
         self.view_calls: list[tuple[str, str]] = []
+        self.lighting_calls: list[tuple[str, dict[str, Any]]] = []
         self.added_tracts: list[str] = []
         self.removed_tracts: list[str] = []
         self.reference_loads: list[Path] = []
@@ -93,6 +95,22 @@ class FakeRenderer:
 
     def set_line_width(self, layer_id: str, width: float) -> None:
         self.scene.tract_by_id(layer_id).line_width = width
+
+    def set_mesh_lighting(self, **changes: Any) -> LightingState:
+        if self.scene.mesh is None:
+            raise RuntimeError("No glass brain mesh is loaded")
+
+        return self._set_lighting("mesh", changes)
+
+    def set_tract_lighting(self, **changes: Any) -> LightingState:
+        return self._set_lighting("tracts", changes)
+
+    def _set_lighting(self, attribute: str, changes: dict[str, Any]) -> LightingState:
+        current = getattr(self.scene.lighting, attribute)
+        updated = LightingState.model_validate({**current.model_dump(), **changes})
+        setattr(self.scene.lighting, attribute, updated)
+        self.lighting_calls.append((attribute, changes))
+        return updated
 
     def set_mesh_surface(self, mesh_path: Path) -> MeshLayerState:
         if self.scene.mesh is None:
@@ -478,3 +496,75 @@ def test_erode_and_diffuse_track_a_signed_millimeter_offset(tmp_path: Path) -> N
     controller.reset_all_settings()
     assert controller.state.surface_offset_mm == 0
     assert not controller.state.mesh_present
+
+
+def test_lighting_controls_drive_the_two_rigs_independently(tmp_path: Path) -> None:
+    reference = tmp_path / "reference.nii.gz"
+    mesh_path = tmp_path / "brain.gii"
+    scene = make_scene(reference, [tmp_path / "a.trk"])
+    scene.mesh = MeshLayerState(path=mesh_path)
+    renderer = FakeRenderer(scene)
+    controller = TractFigureController(
+        FakeServer(),
+        renderer,
+        tmp_path / "outputs",
+    )
+
+    assert controller.state.mesh_lighting_preset == "default"
+    assert controller.state.tract_lighting_preset == "default"
+    assert controller.state.tract_lighting_intensity == 1.0
+    assert controller.state.mesh_lighting_ambient_input == "0.15"
+
+    mesh_preset = controller._make_lighting_callback("mesh", "preset", "mesh_lighting_preset")
+    mesh_preset(mesh_lighting_preset="three_point")
+    assert controller.scene.lighting.mesh.preset == "three_point"
+    # Lighting the glass brain must leave the tracts alone.
+    assert controller.scene.lighting.tracts.preset == "default"
+
+    tract_preset = controller._make_lighting_callback("tracts", "preset", "tract_lighting_preset")
+    tract_preset(tract_lighting_preset="rim")
+    assert controller.scene.lighting.tracts.preset == "rim"
+    assert controller.scene.lighting.mesh.preset == "three_point"
+
+    tract_intensity = controller._make_lighting_callback(
+        "tracts", "intensity", "tract_lighting_intensity"
+    )
+    tract_intensity(tract_lighting_intensity=1.75)
+    assert controller.scene.lighting.tracts.intensity == 1.75
+    assert controller.state.tract_lighting_intensity_input == "1.75"
+
+    # Out-of-range and non-numeric entries clamp or revert rather than raising.
+    tract_intensity(tract_lighting_intensity=99.0)
+    assert controller.scene.lighting.tracts.intensity == 3.0
+    tract_intensity(tract_lighting_intensity="not a number")
+    assert controller.scene.lighting.tracts.intensity == 3.0
+
+    # A repeated value is a no-op, so the renderer is not re-invoked.
+    calls = len(renderer.lighting_calls)
+    tract_preset(tract_lighting_preset="rim")
+    assert len(renderer.lighting_calls) == calls
+
+    controller.reset_all_settings()
+    assert controller.scene.lighting.mesh.preset == "default"
+    assert controller.scene.lighting.tracts.preset == "default"
+    assert controller.state.mesh_lighting_preset == "default"
+    assert controller.state.tract_lighting_intensity_input == "1"
+
+
+def test_mesh_lighting_controls_are_inert_without_a_glass_brain(tmp_path: Path) -> None:
+    reference = tmp_path / "reference.nii.gz"
+    scene = make_scene(reference, [tmp_path / "a.trk"])
+    renderer = FakeRenderer(scene)
+    controller = TractFigureController(
+        FakeServer(),
+        renderer,
+        tmp_path / "outputs",
+    )
+
+    assert not controller.state.mesh_present
+
+    callback = controller._make_lighting_callback("mesh", "preset", "mesh_lighting_preset")
+    callback(mesh_lighting_preset="three_point")
+
+    assert controller.scene.lighting.mesh.preset == "default"
+    assert renderer.lighting_calls == []
