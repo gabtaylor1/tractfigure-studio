@@ -20,6 +20,7 @@ from tractfigure.io import load_tract_layer
 from tractfigure.scene_state_v1_20260730 import (
     CameraState,
     ImageLayerState,
+    LightingState,
     MeshLayerState,
     SceneState,
     TractLayerState,
@@ -49,13 +50,129 @@ ANATOMICAL_VIEW_CONFIG = {
 
 # Port of NiiVue's meshFragOutline: keep only silhouette-facing fragments, so an
 # opaque draw reads as a glass brain with no translucency sorting artifacts.
-OUTLINE_SHADER = """
+OUTLINE_DISCARD = """
+  if (abs(normalize(normalVCVSOutput).z) > 0.6) discard;
+"""
+
+OUTLINE_SHADER = (
+    OUTLINE_DISCARD
+    + """
   vec3 n = normalize(normalVCVSOutput);
-  if (abs(n.z) > 0.6) discard;
   vec3 l = normalize(vec3(0.0, 10.0, 5.0));
   float s = 0.25 * pow(max(dot(reflect(l, n), vec3(0.0, 0.0, 1.0)), 0.0), 10.0);
   fragOutput0 = vec4(diffuseColor * (0.3 + 0.6 * max(dot(n, l), 0.0)) + s, opacity);
 """
+)
+
+SPECULAR_EXPONENT = 32.0
+
+# Named light rigs, expressed in view space: +X is right, +Y up and +Z toward the
+# camera, so a negative Z component places a light behind the subject. Each entry
+# is (direction, diffuse weight, specular weight). VTK lights belong to the whole
+# renderer, so these rigs are baked into per-actor fragment shaders instead --
+# that is what lets the glass brain and the tracts be lit independently.
+LIGHT_RIGS: dict[str, tuple[tuple[tuple[float, float, float], float, float], ...]] = {
+    # A single lamp on the camera axis: even, shadowless, no directional cue.
+    "headlight": (((0.0, 0.0, 1.0), 1.0, 0.5),),
+    # Classic key / fill / rim: the key models the form, the dim fill opens up the
+    # shadow side and the back light separates the silhouette from the background.
+    "three_point": (
+        ((-0.60, 0.50, 0.65), 1.00, 1.00),
+        ((0.75, -0.20, 0.55), 0.35, 0.10),
+        ((0.25, 0.55, -0.80), 0.55, 0.70),
+    ),
+    # Two back lights against a token key: bright edges, dark body.
+    "rim": (
+        ((-0.35, 0.30, 0.70), 0.22, 0.10),
+        ((-0.85, 0.25, -0.50), 0.90, 0.80),
+        ((0.85, 0.20, -0.50), 0.70, 0.60),
+    ),
+    # Broad, near-matte pair for figures where shading must not compete with color.
+    "soft": (
+        ((-0.35, 0.70, 0.60), 0.55, 0.05),
+        ((0.45, -0.50, 0.70), 0.45, 0.00),
+    ),
+    # Unlit: the layer colour, flat. Ambient and specular do not apply.
+    "flat": (),
+}
+
+LIGHTING_PRESETS = ("default", *LIGHT_RIGS)
+
+
+def _normalized_direction(
+    direction: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    vector = np.asarray(direction, dtype=float)
+    return tuple(vector / np.linalg.norm(vector))
+
+
+def lighting_fragment_shader(
+    lighting: LightingState,
+    *,
+    outline: bool = False,
+) -> str | None:
+    """GLSL for `//VTK::Light::Impl`, or None when VTK's shared light kit should stand."""
+
+    if lighting.preset == "default":
+        return OUTLINE_SHADER if outline else None
+
+    gain = float(lighting.intensity)
+    lines = [OUTLINE_DISCARD] if outline else []
+
+    if lighting.preset == "flat":
+        lines.append(f"  fragOutput0 = vec4(diffuseColor * {gain:.4f}, opacity);")
+        return "\n".join(lines) + "\n"
+
+    specular_gain = gain * float(lighting.specular)
+
+    lines.append("  vec3 lightNormal = normalize(normalVCVSOutput);")
+    # Two-sided shading: tube interiors and mesh back faces face away from the
+    # camera, and would otherwise render unlit.
+    lines.append("  if (lightNormal.z < 0.0) lightNormal = -lightNormal;")
+    lines.append(f"  vec3 lightAccum = {float(lighting.ambient):.4f} * diffuseColor;")
+
+    for direction, diffuse_weight, specular_weight in LIGHT_RIGS[lighting.preset]:
+        x, y, z = _normalized_direction(direction)
+        half_x, half_y, half_z = _normalized_direction((x, y, z + 1.0))
+
+        lines.append("  {")
+        lines.append(f"    vec3 lightDir = vec3({x:.4f}, {y:.4f}, {z:.4f});")
+        lines.append("    float lightDot = max(dot(lightNormal, lightDir), 0.0);")
+        lines.append(f"    lightAccum += {gain * diffuse_weight:.4f} * lightDot * diffuseColor;")
+
+        if specular_weight > 0.0:
+            lines.append(f"    vec3 lightHalf = vec3({half_x:.4f}, {half_y:.4f}, {half_z:.4f});")
+            # White highlight, so the specular lobe reads as a light rather than
+            # as more of the layer colour.
+            lines.append(
+                f"    lightAccum += vec3({specular_gain * specular_weight:.4f}"
+                f" * pow(max(dot(lightNormal, lightHalf), 0.0), {SPECULAR_EXPONENT:.1f}));"
+            )
+
+        lines.append("  }")
+
+    lines.append("  fragOutput0 = vec4(clamp(lightAccum, 0.0, 1.0), opacity);")
+    return "\n".join(lines) + "\n"
+
+
+def _updated_lighting(
+    lighting: LightingState,
+    *,
+    preset: str | None,
+    intensity: float | None,
+    ambient: float | None,
+    specular: float | None,
+) -> LightingState:
+    """A validated copy of `lighting` with the supplied fields replaced."""
+
+    fields = {
+        "preset": preset,
+        "intensity": intensity,
+        "ambient": ambient,
+        "specular": specular,
+    }
+    changes = {name: value for name, value in fields.items() if value is not None}
+    return LightingState.model_validate({**lighting.model_dump(), **changes})
 
 
 def image_transform(image_state: ImageLayerState, pivot: np.ndarray) -> np.ndarray:
@@ -270,18 +387,91 @@ class SceneRenderer:
         return scene.mesh
 
     def _apply_mesh_shader(self, shader: str) -> None:
+        """Install the glass brain's fragment shader: outline silhouette, lighting rig, or both."""
+
+        scene = self.scene
+        lighting = scene.lighting.mesh if scene is not None else LightingState()
+        source = lighting_fragment_shader(lighting, outline=shader == "outline")
+
         shader_property = self.mesh_actor.GetShaderProperty()
         shader_property.ClearAllFragmentShaderReplacements()
-        if shader == "outline":
-            shader_property.AddFragmentShaderReplacement(
-                "//VTK::Light::Impl", False, OUTLINE_SHADER, False
-            )
+
+        if source is not None:
+            shader_property.AddFragmentShaderReplacement("//VTK::Light::Impl", False, source, False)
 
     def set_mesh_shader(self, shader: str) -> None:
         mesh = self._require_scene().mesh
         mesh.shader = shader
         self._apply_mesh_shader(mesh.shader)
         self._refresh()
+
+    def _tract_lighting(self) -> LightingState:
+        scene = self.scene
+        return scene.lighting.tracts if scene is not None else LightingState()
+
+    def _apply_tract_lighting(self, actor: pv.Actor | None = None) -> None:
+        """Install the tract lighting rig on one tract actor, or on all of them."""
+
+        source = lighting_fragment_shader(self._tract_lighting())
+        actors = self.actors_by_id.values() if actor is None else (actor,)
+
+        for target in actors:
+            shader_property = target.GetShaderProperty()
+            shader_property.ClearAllFragmentShaderReplacements()
+
+            if source is not None:
+                shader_property.AddFragmentShaderReplacement(
+                    "//VTK::Light::Impl", False, source, False
+                )
+
+    def set_mesh_lighting(
+        self,
+        *,
+        preset: str | None = None,
+        intensity: float | None = None,
+        ambient: float | None = None,
+        specular: float | None = None,
+    ) -> LightingState:
+        scene = self._require_scene()
+
+        if scene.mesh is None:
+            raise RuntimeError("No glass brain mesh is loaded")
+
+        lighting = _updated_lighting(
+            scene.lighting.mesh,
+            preset=preset,
+            intensity=intensity,
+            ambient=ambient,
+            specular=specular,
+        )
+        scene.lighting.mesh = lighting
+
+        self._apply_mesh_shader(scene.mesh.shader)
+        self._refresh()
+        return lighting
+
+    def set_tract_lighting(
+        self,
+        *,
+        preset: str | None = None,
+        intensity: float | None = None,
+        ambient: float | None = None,
+        specular: float | None = None,
+    ) -> LightingState:
+        scene = self._require_scene()
+
+        lighting = _updated_lighting(
+            scene.lighting.tracts,
+            preset=preset,
+            intensity=intensity,
+            ambient=ambient,
+            specular=specular,
+        )
+        scene.lighting.tracts = lighting
+
+        self._apply_tract_lighting()
+        self._refresh()
+        return lighting
 
     def set_mesh_opacity(self, opacity: float) -> None:
         mesh = self._require_scene().mesh
@@ -424,6 +614,7 @@ class SceneRenderer:
         actor.SetVisibility(bool(tract_state.visible))
 
         self.actors_by_id[tract_state.id] = actor
+        self._apply_tract_lighting(actor)
         return actor
 
     def add_tract(self, tract_state: TractLayerState) -> None:
@@ -787,6 +978,8 @@ class SceneRenderer:
             raise ValueError("Cannot restore settings after reference image changed")
 
         scene.canvas = initial_scene.canvas.model_copy(deep=True)
+        scene.lighting = initial_scene.lighting.model_copy(deep=True)
+        self._apply_tract_lighting()
         self.plotter.window_size = (
             scene.canvas.width,
             scene.canvas.height,

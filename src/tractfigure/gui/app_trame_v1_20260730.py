@@ -31,10 +31,11 @@ from tractfigure.morphology_niimath_v1_20260905 import (
     SurfaceMorpher,
     describe_offset,
 )
-from tractfigure.renderer_trame_v1_20260730 import SceneRenderer
+from tractfigure.renderer_trame_v1_20260730 import LIGHTING_PRESETS, SceneRenderer
 from tractfigure.scene_state_v1_20260730 import (
     CanvasState,
     ImageLayerState,
+    LightingState,
     MeshLayerState,
     SceneState,
     TractLayerState,
@@ -115,6 +116,27 @@ ACTIVE_NUMERIC_MODELS = (
     "active_tube_radius",
     "active_tube_sides",
 )
+
+# (state prefix, SceneLightingState field, panel heading, drawer v-if guard)
+LIGHTING_TARGETS = (
+    ("mesh_lighting", "mesh", "Glass brain lighting", "mesh_present"),
+    ("tract_lighting", "tracts", "Tract lighting", None),
+)
+# (LightingState field, slider range, step)
+LIGHTING_CONTROLS = (
+    ("intensity", (0.0, 3.0), 0.05),
+    ("ambient", (0.0, 1.0), 0.05),
+    ("specular", (0.0, 1.0), 0.05),
+)
+LIGHTING_NUMERIC_MODELS = tuple(
+    f"{prefix}_{field}"
+    for prefix, _attribute, _heading, _guard in LIGHTING_TARGETS
+    for field, _limits, _step in LIGHTING_CONTROLS
+)
+
+for _prefix, _attribute, _heading, _guard in LIGHTING_TARGETS:
+    for _field, _limits, _step in LIGHTING_CONTROLS:
+        NUMERIC_CONTROL_CONFIG[f"{_prefix}_{_field}"] = (*_limits, False)
 
 
 def split_color_and_alpha(
@@ -367,6 +389,8 @@ class TractFigureController:
         self.state.mesh_shader = self.scene.mesh.shader if self.scene.mesh else "phong"
         self.state.mesh_opacity = self.scene.mesh.opacity if self.scene.mesh else 0.25
         self.state.scene_background = self.scene.canvas.background
+        self.state.lighting_preset_items = list(LIGHTING_PRESETS)
+        self._sync_lighting_state()
 
         for slice_name, field_name in SLICE_VISIBILITY_FIELDS.items():
             setattr(
@@ -428,6 +452,12 @@ class TractFigureController:
 
         for key in IMAGE_TRANSFORM_MODELS:
             self.callbacks.append(self.state.change(key)(self._on_image_transform))
+
+        for prefix, attribute, _heading, _guard in LIGHTING_TARGETS:
+            for field in ("preset", *(name for name, _limits, _step in LIGHTING_CONTROLS)):
+                key = f"{prefix}_{field}"
+                callback = self._make_lighting_callback(attribute, field, key)
+                self.callbacks.append(self.state.change(key)(callback))
 
         for key, callback in (
             ("active_color", self._on_active_color),
@@ -807,6 +837,7 @@ class TractFigureController:
                 self.state.mesh_opacity = self.scene.mesh.opacity
                 self.state.mesh_shader = self.scene.mesh.shader
             self.state.scene_background = self.scene.canvas.background
+            self._sync_lighting_state()
 
             for slice_name, field_name in SLICE_VISIBILITY_FIELDS.items():
                 setattr(
@@ -1156,6 +1187,100 @@ class TractFigureController:
 
         self.renderer.set_mesh_shader(mesh_shader)
         self.state.status_message = f"Mesh shader changed to {mesh_shader}"
+        self.update_view()
+
+    def _lighting_state(self, attribute: str) -> LightingState:
+        return getattr(self.scene.lighting, attribute)
+
+    def _sync_lighting_state(self) -> None:
+        """Push the scene's two lighting rigs back into the drawer controls."""
+
+        for prefix, attribute, _heading, _guard in LIGHTING_TARGETS:
+            lighting = self._lighting_state(attribute)
+
+            self._assign_state_without_callback(
+                f"{prefix}_preset",
+                lighting.preset,
+            )
+
+            for field, _limits, _step in LIGHTING_CONTROLS:
+                key = f"{prefix}_{field}"
+                self._assign_state_without_callback(key, getattr(lighting, field))
+                self._synchronize_numeric_input(key)
+
+    def _make_lighting_callback(
+        self,
+        attribute: str,
+        field: str,
+        key: str,
+    ):
+        def callback(
+            *_args: Any,
+            **kwargs: Any,
+        ) -> None:
+            self._apply_lighting_change(
+                attribute,
+                field,
+                key,
+                kwargs.get(key),
+            )
+
+        return callback
+
+    def _apply_lighting_change(
+        self,
+        attribute: str,
+        field: str,
+        key: str,
+        raw_value: Any,
+    ) -> None:
+        if self._state_sync_in_progress:
+            return
+
+        # The glass brain rig has nothing to light until a mesh is loaded.
+        if attribute == "mesh" and self.scene.mesh is None:
+            return
+
+        lighting = self._lighting_state(attribute)
+        current = getattr(lighting, field)
+
+        if field == "preset":
+            if raw_value == current:
+                return
+
+            value: Any = raw_value
+        else:
+            minimum, maximum, _integer = self._numeric_bounds(key)
+            value = self._normalize_numeric_state(
+                key=key,
+                raw_value=raw_value,
+                current_value=current,
+                minimum=minimum,
+                maximum=maximum,
+            )
+
+            if value is None or abs(current - value) < 1e-9:
+                return
+
+        setter = getattr(
+            self.renderer,
+            "set_mesh_lighting" if attribute == "mesh" else "set_tract_lighting",
+        )
+
+        try:
+            updated = setter(**{field: value})
+        except ValueError as error:
+            self.state.status_message = str(error)
+            self._sync_lighting_state()
+            return
+
+        target = "Glass brain" if attribute == "mesh" else "Tract"
+
+        if field == "preset":
+            self.state.status_message = f"{target} lighting: {updated.preset}"
+        else:
+            self.state.status_message = f"{target} lighting {field}: {value:g}"
+
         self.update_view()
 
     def _set_surface_offset(self, millimeters: int) -> None:
@@ -2213,6 +2338,65 @@ def build_ui(
                     v_if="active_warnings_visible",
                     classes="mt-3",
                 )
+
+                v3.VDivider(classes="my-3")
+                v3.VCardTitle("Lighting")
+                v3.VCardSubtitle(
+                    "The glass brain and the tracts are lit independently.",
+                    classes="pa-0 mb-2 text-caption",
+                )
+
+                for prefix, attribute, heading, guard in LIGHTING_TARGETS:
+                    lighting = getattr(controller.scene.lighting, attribute)
+                    preset_key = f"{prefix}_preset"
+                    subtitle_arguments: dict[str, Any] = {
+                        "classes": "pa-0 mt-2 text-subtitle-2",
+                    }
+                    select_arguments: dict[str, Any] = {}
+
+                    if guard is not None:
+                        subtitle_arguments["v_if"] = guard
+                        select_arguments["v_if"] = guard
+
+                    v3.VCardSubtitle(heading, **subtitle_arguments)
+
+                    v3.VSelect(
+                        label="Preset",
+                        v_model=(preset_key, lighting.preset),
+                        items=(
+                            "lighting_preset_items",
+                            list(LIGHTING_PRESETS),
+                        ),
+                        hide_details=True,
+                        density="compact",
+                        variant="outlined",
+                        classes="mt-2",
+                        **select_arguments,
+                    )
+
+                    for field, (minimum, maximum), step in LIGHTING_CONTROLS:
+                        model = f"{prefix}_{field}"
+                        # Intensity is meaningless while VTK's shared light kit is
+                        # in charge; ambient and specular are also unused by "flat".
+                        conditions = [f"{preset_key} !== 'default'"]
+
+                        if field != "intensity":
+                            conditions.append(f"{preset_key} !== 'flat'")
+
+                        if guard is not None:
+                            conditions.insert(0, guard)
+
+                        numeric_slider(
+                            label=field.capitalize(),
+                            model=model,
+                            value=getattr(lighting, field),
+                            minimum=minimum,
+                            maximum=maximum,
+                            step=step,
+                            input_model=f"{model}_input",
+                            commit=getattr(ctrl, f"commit_{model}_input"),
+                            v_if=" && ".join(conditions),
+                        )
 
                 v3.VDivider(classes="my-3")
                 v3.VCardTitle("Scene settings")
