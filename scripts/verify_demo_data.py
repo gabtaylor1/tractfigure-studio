@@ -195,6 +195,7 @@ def main() -> None:
     REPORT_PATH.write_text(
         json.dumps(report, indent=2) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"Demo-data verification passed: {REPORT_PATH}")
 

@@ -9,7 +9,22 @@
     "axial_visible": true,
     "sagittal_index": null,
     "coronal_index": null,
-    "axial_index": null
+    "axial_index": null,
+    "translation_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ]
   },
   "tracts": [
     {
@@ -95,5 +110,19 @@
     "width": 1400,
     "height": 1000,
     "background": "#FFFFFF"
+  },
+  "lighting": {
+    "mesh": {
+      "preset": "default",
+      "intensity": 1.0,
+      "ambient": 0.15,
+      "specular": 0.3
+    },
+    "tracts": {
+      "preset": "default",
+      "intensity": 1.0,
+      "ambient": 0.15,
+      "specular": 0.3
+    }
   }
 }

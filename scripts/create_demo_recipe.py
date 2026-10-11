@@ -10,6 +10,7 @@ from tractfigure.gui.app_trame_v1_20260730 import DEFAULT_COLORS
 from tractfigure.scene_state_v1_20260730 import (
     CanvasState,
     ImageLayerState,
+    MeshLayerState,
     SceneState,
     TractLayerState,
 )
@@ -17,6 +18,8 @@ from tractfigure.scene_state_v1_20260730 import (
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INVENTORY_PATH = PROJECT_ROOT / "demo_data" / "data_inventory.json"
 RECIPE_PATH = PROJECT_ROOT / "examples" / "recipes" / "five_bundle_trame_v1_20260730.json"
+# Cortical surface shipped in git; template0 shares MNI space with it.
+MESH_PATH = PROJECT_ROOT / "demo_data" / "dsi" / "mni152.gii"
 
 
 def project_path(value: str) -> Path:
@@ -56,6 +59,9 @@ def main() -> None:
             opacity=1.0,
         ),
         tracts=tracts,
+        mesh=MeshLayerState(
+            path=Path(portable_relative(MESH_PATH, recipe_directory)),
+        ),
         active_layer_id=tracts[0].id,
         canvas=CanvasState(
             width=1400,
@@ -75,7 +81,7 @@ def main() -> None:
         tract_payload["path"] = portable_relative(tractogram, recipe_directory)
 
     RECIPE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    RECIPE_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    RECIPE_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Demo recipe ready: {RECIPE_PATH}")
 
 
