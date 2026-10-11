@@ -83,7 +83,12 @@
       "coordinate_report": {}
     }
   ],
-  "mesh": null,
+  "mesh": {
+    "path": "../../demo_data/dsi/mni152.gii",
+    "opacity": 0.25,
+    "color": "#D9D9D9",
+    "shader": "phong"
+  },
   "active_layer_id": "cc-m-sub",
   "camera": null,
   "canvas": {
