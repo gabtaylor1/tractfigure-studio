@@ -583,7 +583,6 @@ def load_tract_layer(
         stateful = load_tractogram(
             str(path),
             load_reference,
-            str(reference),
             to_space=Space.RASMM,
             to_origin=Origin.NIFTI,
             bbox_valid_check=False,
