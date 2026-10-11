@@ -568,3 +568,31 @@ def test_mesh_lighting_controls_are_inert_without_a_glass_brain(tmp_path: Path) 
 
     assert controller.scene.lighting.mesh.preset == "default"
     assert renderer.lighting_calls == []
+
+
+def test_seventy_layer_scene_stays_navigable_with_scoped_edits(tmp_path: Path) -> None:
+    tract_count = 72
+    reference = tmp_path / "reference.nii.gz"
+    paths = [tmp_path / f"bundle-{index}.trk" for index in range(tract_count)]
+    scene = make_scene(reference, paths)
+    renderer = FakeRenderer(scene)
+    controller = TractFigureController(
+        FakeServer(),
+        renderer,
+        tmp_path / "outputs",
+    )
+
+    assert len(controller.state.layer_items) == tract_count
+
+    controller.toggle_layer_visibility("tract-7")
+    visible_flags = [tract.visible for tract in controller.scene.tracts]
+    assert visible_flags.count(False) == 1
+    assert not controller.scene.tract_by_id("tract-7").visible
+
+    controller.toggle_layer_link("tract-40")
+    controller.toggle_layer_link("tract-41")
+    controller.state.active_layer_id = "tract-40"
+    controller._on_active_color(active_color="#AABBCC")
+
+    changed = {tract.id for tract in controller.scene.tracts if tract.color == "#AABBCC"}
+    assert changed == {"tract-40", "tract-41"}
