@@ -93,6 +93,27 @@ class FakeRenderer:
         tract.color = color
         tract.opacity = opacity
 
+    def set_background(self, color: str) -> None:
+        self.scene.canvas.background = color
+
+    def set_image_visible(self, visible: bool) -> None:
+        self.scene.image.visible = bool(visible)
+
+    def set_slice_visible(self, plane: str, visible: bool) -> None:
+        setattr(self.scene.image, f"{plane}_visible", bool(visible))
+
+    def set_mesh_shader(self, shader: str) -> None:
+        if self.scene.mesh is None:
+            raise RuntimeError("No glass brain mesh is loaded")
+
+        self.scene.mesh.shader = shader
+
+    def set_mesh_opacity(self, opacity: float) -> None:
+        if self.scene.mesh is None:
+            raise RuntimeError("No glass brain mesh is loaded")
+
+        self.scene.mesh.opacity = opacity
+
     def set_line_width(self, layer_id: str, width: float) -> None:
         self.scene.tract_by_id(layer_id).line_width = width
 
@@ -582,3 +603,26 @@ def test_mesh_lighting_controls_are_inert_without_a_glass_brain(tmp_path: Path) 
 
     assert controller.scene.lighting.mesh.preset == "default"
     assert renderer.lighting_calls == []
+
+
+def test_presentation_preset_restylings_layers_and_camera(tmp_path: Path) -> None:
+    reference = tmp_path / "reference.nii.gz"
+    scene = make_scene(reference, [tmp_path / "a.trk", tmp_path / "b.trk"])
+    scene.mesh = MeshLayerState(path=tmp_path / "surface.gii", shader="outline", opacity=1.0)
+    renderer = FakeRenderer(scene)
+    controller = TractFigureController(
+        FakeServer(),
+        renderer,
+        tmp_path / "outputs",
+    )
+
+    controller.state.presentation_preset = "orthographic-atlas"
+    controller.apply_presentation_preset()
+
+    assert controller.scene.canvas.background == "#FFFFFF"
+    assert controller.scene.tracts[0].color == "#E69F00"
+    assert controller.scene.tracts[1].color == "#56B4E9"
+    assert [tract.id for tract in controller.scene.tracts] == ["tract-0", "tract-1"]
+    assert controller.scene.mesh.opacity == 0.85
+    assert renderer.view_calls == [("coronal", "anterior")]
+    assert "orthographic-atlas" in controller.state.status_message

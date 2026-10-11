@@ -101,3 +101,28 @@ python -m tractfigure.gui.app_trame_v1_20260730 \
 
 The nine parameters are saved with the scene. Validation steps:
 `PREHACKATHON_GUIDE.md`, section 13, "Validate the manual registration demo".
+
+## Presentation presets and tract palette
+
+The "Presentation preset" selector in the drawer restyles the whole scene in
+one step — background, reference slices, glass-brain shader/opacity, tract
+palette, and an anatomical camera — without renaming, reordering, or dropping
+any layer. Applying a preset is deterministic and survives save/reload.
+
+| Preset | Background | Slices | Glass brain | Palette | Camera |
+| --- | --- | --- | --- | --- | --- |
+| `orthographic-atlas` | `#FFFFFF` | hidden | `outline` @ 0.85 | yes | coronal, anterior |
+| `clinical-dark` | `#000000` | shown | `phong` @ 0.25 | no | sagittal, left |
+
+The tract palette is the colorblind-safe Okabe-Ito categorical scheme
+(<https://jfly.uni-koeln.de/color/>), cycled over layers in scene order:
+
+| Name | HEX |
+| --- | --- |
+| Orange | `#E69F00` |
+| Sky Blue | `#56B4E9` |
+| Bluish Green | `#009E73` |
+| Yellow | `#F0E442` |
+| Blue | `#0072B2` |
+| Vermillion | `#D55E00` |
+| Reddish Purple | `#CC79A7` |
