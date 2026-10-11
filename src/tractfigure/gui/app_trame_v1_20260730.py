@@ -66,6 +66,12 @@ ANATOMICAL_PRIMARY_SIDES = {
 SURFACE_MORPH_STEP_MM = 1
 SURFACE_MORPH_LIMIT_MM = 10
 
+# Bundled scene used when the app is launched with no data arguments; its
+# inputs ship in git under demo_data/dsi, so no download step is needed.
+DEFAULT_DEMO_RECIPE = (
+    Path(__file__).resolve().parents[3] / "examples" / "recipes" / "quickstart.json"
+)
+
 ANATOMICAL_OPPOSITE_SIDES = {
     "left": "right",
     "right": "left",
@@ -2543,6 +2549,9 @@ def scene_from_cli(args: Any) -> SceneState:
             raise ValueError("--recipe cannot be combined with --reference, --tractogram or --mesh")
 
         return load_recipe(args.recipe)
+
+    if args.reference is None and not args.tractogram and args.mesh is None:
+        return load_recipe(DEFAULT_DEMO_RECIPE)
 
     if args.reference is None:
         raise ValueError("--reference is required when --recipe is absent")
