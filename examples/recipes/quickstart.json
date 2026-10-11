@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "image": {
+    "path": "../../demo_data/dsi/mni152.nii.gz",
+    "visible": true,
+    "opacity": 1.0,
+    "sagittal_visible": true,
+    "coronal_visible": true,
+    "axial_visible": true,
+    "sagittal_index": null,
+    "coronal_index": null,
+    "axial_index": null
+  },
+  "tracts": [
+    {
+      "id": "tr-s-r",
+      "name": "TR_S_R",
+      "path": "../../demo_data/dsi/TR_S_R.tt.gz",
+      "visible": true,
+      "color": "#E64B35",
+      "opacity": 1.0,
+      "render_mode": "tube",
+      "line_width": 1.0,
+      "tube_radius": 0.35,
+      "tube_sides": 8,
+      "max_streamlines": 5000,
+      "coordinate_report": {}
+    }
+  ],
+  "mesh": {
+    "path": "../../demo_data/dsi/mni152.gii",
+    "opacity": 1.0,
+    "color": "#D9D9D9",
+    "shader": "outline"
+  },
+  "active_layer_id": "tr-s-r",
+  "camera": null,
+  "canvas": {
+    "width": 1400,
+    "height": 1000,
+    "background": "#FFFFFF"
+  }
+}

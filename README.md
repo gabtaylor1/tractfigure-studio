@@ -14,6 +14,25 @@ summarized in `docs/ARCHITECTURE.md`.
 
 ## After installing and activating the environment
 
+Launch the tool with one command — no arguments, no downloads. It opens the
+bundled quickstart scene (MNI152 T1, DSI Studio bundle, glass brain):
+
+```bash
+tractfigure-gui
+```
+
+Point it at your own data instead, or load it in the browser with the image and
+tract open controls:
+
+```bash
+tractfigure-gui --reference t1.nii.gz --tractogram bundle.tck --tractogram bundles/ --mesh surf.gii
+tractfigure-gui --recipe examples/recipes/five_bundle_trame_v1_20260730.json
+```
+
+Open `http://localhost:8080` if the browser does not open automatically.
+
+For the full demonstration datasets and the validated five-bundle scene:
+
 ```bash
 python scripts/fetch_demo_data.py
 python scripts/verify_demo_data.py

@@ -208,6 +208,20 @@ def test_cli_recipe_and_color_helpers(tmp_path: Path) -> None:
     assert opacity is not None and abs(opacity - 128 / 255) < 1e-9
 
 
+def test_launch_without_arguments_loads_bundled_demo() -> None:
+    scene = scene_from_cli(
+        SimpleNamespace(recipe=None, reference=None, tractogram=[], mesh=None)
+    )
+
+    assert scene.image.path.name == "mni152.nii.gz"
+    assert scene.mesh is not None
+    assert scene.tracts
+    # A fresh clone has no demo_data/cache, so the default scene must
+    # reference only files that ship in the repository.
+    for path in [scene.image.path, scene.mesh.path, *(tract.path for tract in scene.tracts)]:
+        assert "cache" not in path.parts
+
+
 def test_load_recipe_resolves_portable_relative_paths(tmp_path: Path) -> None:
     data_directory = tmp_path / "data"
     recipe_directory = tmp_path / "examples" / "recipes"
