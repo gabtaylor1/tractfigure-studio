@@ -15,5 +15,6 @@ def test_generated_recipe_carries_glass_brain_mesh(
 
     payload = json.loads(recipe_path.read_text(encoding="utf-8"))
     mesh = payload["mesh"]
-    assert mesh["path"].endswith("../../demo_data/dsi/mni152.gii")
+    resolved = (recipe_path.parent / mesh["path"]).resolve()
+    assert resolved == create_demo_recipe.MESH_PATH.resolve()
     assert (mesh["opacity"], mesh["color"], mesh["shader"]) == (0.25, "#D9D9D9", "phong")
