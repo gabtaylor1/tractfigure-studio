@@ -11,7 +11,8 @@ INVENTORY_PATH = PROJECT_ROOT / "demo_data" / "data_inventory.json"
 
 
 def load_inventory() -> dict:
-    assert INVENTORY_PATH.is_file(), "Run scripts/fetch_demo_data.py"
+    if not INVENTORY_PATH.is_file():
+        pytest.skip("Demo data not fetched; run scripts/fetch_demo_data.py")
     return json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
 
 
@@ -27,6 +28,8 @@ def test_five_format_tractograms(tractogram_index: int) -> None:
     tractograms = inventory["file_formats"]["tractograms"]
     assert len(tractograms) == 5
     path = project_path(tractograms[tractogram_index])
+    if not path.is_file():
+        pytest.skip(f"Demo data not fetched: {path}")
 
     layer = load_tract_layer(path, reference_path=reference)
     inspection = layer.inspection
@@ -47,10 +50,12 @@ def test_five_format_tractograms(tractogram_index: int) -> None:
 def test_hcp842_inventory_represents_80_anatomical_bundles() -> None:
     inventory = load_inventory()
     bundles = [project_path(value) for value in inventory["hcp842"]["bundles"]]
+    if not all(path.is_file() for path in bundles):
+        pytest.skip("HCP842 data not fetched; run scripts/fetch_demo_data.py")
     assert len(bundles) == 79
     assert inventory["hcp842"].get("anatomical_bundle_count", 80) == 80
     assert inventory["hcp842"].get("tractogram_file_count", len(bundles)) == 79
-    assert all(path.is_file() and path.stat().st_size > 0 for path in bundles)
+    assert all(path.stat().st_size > 0 for path in bundles)
 
 
 @pytest.mark.integration

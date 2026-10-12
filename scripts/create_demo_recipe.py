@@ -32,9 +32,14 @@ def layer_id(path: Path) -> str:
 
 
 def portable_relative(path: Path, directory: Path) -> str:
-    """Return a recipe-relative path using JSON-portable forward slashes."""
+    """Return a recipe-relative path, or an absolute one across drives."""
 
-    return Path(os.path.relpath(path.resolve(), directory.resolve())).as_posix()
+    try:
+        rel = os.path.relpath(path.resolve(), directory.resolve())
+    except ValueError:
+        # Windows: a recipe may live on another drive than the data.
+        rel = str(path.resolve())
+    return Path(rel).as_posix()
 
 
 def main() -> None:
@@ -48,7 +53,7 @@ def main() -> None:
         TractLayerState(
             id=layer_id(path),
             name=path.stem,
-            path=Path(os.path.relpath(path, recipe_directory)),
+            path=Path(portable_relative(path, recipe_directory)),
             color=color,
         )
         for path, color in zip(tractograms, colors, strict=False)

@@ -45,7 +45,7 @@ packages = ["src/tractfigure"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "integration: tests requiring downloaded demonstration data",
+    "integration: tests spawning real VTK rendering or needing downloaded demonstration data",
     "registration: registration optimization tests",
 ]
 
