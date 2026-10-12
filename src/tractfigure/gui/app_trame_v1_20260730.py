@@ -2493,23 +2493,12 @@ def build_ui(
             ):
                 view = plotter_ui(
                     controller.renderer.plotter,
-                    # trame mode = remote server rendering with vtk.js
-                    # interaction smoothing; server mode streams a frame per
-                    # mouse event and lags badly. Local is pinned off below.
                     mode="trame",
                     default_server_rendering=True,
                     collapse_menu=False,
                     add_menu=True,
                     server=server,
                 )
-
-                def pin_server_rendering(**_kwargs: Any) -> None:
-                    # Local WebGL renders unreliably without GPU drivers;
-                    # any flip to local is immediately undone.
-                    if server.state[viewer.SERVER_RENDERING] is not True:
-                        server.state[viewer.SERVER_RENDERING] = True
-
-                server.state.change(viewer.SERVER_RENDERING)(pin_server_rendering)
 
         layout.footer.hide()
 
