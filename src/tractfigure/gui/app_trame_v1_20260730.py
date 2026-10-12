@@ -31,12 +31,6 @@ from tractfigure.morphology_niimath_v1_20260905 import (
     SurfaceMorpher,
     describe_offset,
 )
-from tractfigure.presets import (
-    PRESENTATION_PRESETS,
-)
-from tractfigure.presets import (
-    apply_presentation_preset as restyle_scene,
-)
 from tractfigure.renderer_trame_v1_20260730 import LIGHTING_PRESETS, SceneRenderer
 from tractfigure.scene_state_v1_20260730 import (
     CanvasState,
@@ -402,8 +396,6 @@ class TractFigureController:
         self.state.mesh_opacity = self.scene.mesh.opacity if self.scene.mesh else 0.25
         self.state.scene_background = self.scene.canvas.background
         self.state.lighting_preset_items = list(LIGHTING_PRESETS)
-        self.state.presentation_preset_items = list(PRESENTATION_PRESETS)
-        self.state.presentation_preset = PRESENTATION_PRESETS["orthographic-atlas"].name
         self._sync_lighting_state()
 
         for slice_name, field_name in SLICE_VISIBILITY_FIELDS.items():
@@ -448,9 +440,6 @@ class TractFigureController:
         self.callbacks.append(self.state.change("mesh_opacity")(self._on_mesh_opacity))
         self.callbacks.append(self.state.change("mesh_shader")(self._on_mesh_shader))
         self.callbacks.append(self.state.change("scene_background")(self._on_scene_background))
-        self.callbacks.append(
-            self.state.change("presentation_preset")(self._on_presentation_preset)
-        )
 
         for slice_name in SLICE_VISIBILITY_FIELDS:
             state_key = f"{slice_name}_visible"
@@ -503,7 +492,6 @@ class TractFigureController:
         self.ctrl.hide_all_layers = self.hide_all_layers
         self.ctrl.reset_active_tract_settings = self.reset_active_tract_settings
         self.ctrl.reset_all_settings = self.reset_all_settings
-        self.ctrl.apply_presentation_preset = self.apply_presentation_preset
         self.ctrl.view_perspective = self.view_perspective
         self.ctrl.view_sagittal = self.view_sagittal
         self.ctrl.view_coronal = self.view_coronal
@@ -1642,42 +1630,6 @@ class TractFigureController:
         self._synchronize_camera_to_view()
         self.state.status_message = "Perspective view"
 
-    def _on_presentation_preset(self, **_kwargs: Any) -> None:
-        self.apply_presentation_preset()
-
-    def apply_presentation_preset(self) -> None:
-        preset = PRESENTATION_PRESETS.get(self.state.presentation_preset)
-        if preset is None:
-            self.state.status_message = (
-                f"Unknown presentation preset: {self.state.presentation_preset}"
-            )
-            return
-
-        restyle_scene(self.scene, preset)
-        self.renderer.set_background(preset.background)
-        self.renderer.set_image_visible(preset.image_visible)
-
-        for slice_name in SLICE_VISIBILITY_FIELDS:
-            self.renderer.set_slice_visible(slice_name, preset.slices_visible)
-
-        if self.scene.mesh is not None:
-            self.renderer.set_mesh_shader(preset.mesh_shader)
-            self.renderer.set_mesh_opacity(preset.mesh_opacity)
-
-        for tract in self.scene.tracts:
-            self.renderer.set_tract_appearance(tract.id, tract.color, tract.opacity)
-
-        if preset.view is not None:
-            plane, side = preset.view
-            self.renderer.set_anatomical_view(plane, side)
-            self._last_anatomical_plane = plane
-            self._anatomical_side[plane] = side
-
-        self._synchronize_camera_to_view()
-        self._synchronize_state_from_scene()
-        self.state.presentation_preset = preset.name
-        self._flush_state()
-        self.state.status_message = f"Preset applied: {preset.name}"
 
     def show_all_layers(self) -> None:
         self.state.all_tracts_visible = True
@@ -2453,23 +2405,6 @@ def build_ui(
                             v_if=" && ".join(conditions),
                         )
 
-                v3.VDivider(classes="my-3")
-                v3.VCardTitle("Presentation preset")
-
-                v3.VSelect(
-                    label="Preset",
-                    v_model=(
-                        "presentation_preset",
-                        controller.state.presentation_preset,
-                    ),
-                    items=(
-                        "presentation_preset_items",
-                        list(PRESENTATION_PRESETS),
-                    ),
-                    hide_details=True,
-                    density="compact",
-                    variant="outlined",
-                )
 
                 v3.VDivider(classes="my-3")
                 v3.VCardTitle("Scene settings")
