@@ -10,6 +10,7 @@ from tractfigure.gui.app_trame_v1_20260730 import DEFAULT_COLORS
 from tractfigure.scene_state_v1_20260730 import (
     CanvasState,
     ImageLayerState,
+    MeshLayerState,
     SceneState,
     TractLayerState,
 )
@@ -17,6 +18,8 @@ from tractfigure.scene_state_v1_20260730 import (
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INVENTORY_PATH = PROJECT_ROOT / "demo_data" / "data_inventory.json"
 RECIPE_PATH = PROJECT_ROOT / "examples" / "recipes" / "five_bundle_trame_v1_20260730.json"
+# Cortical surface shipped in git; template0 shares MNI space with it.
+MESH_PATH = PROJECT_ROOT / "demo_data" / "dsi" / "mni152.gii"
 
 
 def project_path(value: str) -> Path:
@@ -29,9 +32,14 @@ def layer_id(path: Path) -> str:
 
 
 def portable_relative(path: Path, directory: Path) -> str:
-    """Return a recipe-relative path using JSON-portable forward slashes."""
+    """Return a recipe-relative path, or an absolute one across drives."""
 
-    return Path(os.path.relpath(path.resolve(), directory.resolve())).as_posix()
+    try:
+        rel = os.path.relpath(path.resolve(), directory.resolve())
+    except ValueError:
+        # Windows: a recipe may live on another drive than the data.
+        rel = str(path.resolve())
+    return Path(rel).as_posix()
 
 
 def main() -> None:
@@ -45,17 +53,20 @@ def main() -> None:
         TractLayerState(
             id=layer_id(path),
             name=path.stem,
-            path=Path(os.path.relpath(path, recipe_directory)),
+            path=Path(portable_relative(path, recipe_directory)),
             color=color,
         )
         for path, color in zip(tractograms, colors, strict=False)
     ]
     scene = SceneState(
         image=ImageLayerState(
-            path=Path(os.path.relpath(reference, recipe_directory)),
+            path=Path(portable_relative(reference, recipe_directory)),
             opacity=1.0,
         ),
         tracts=tracts,
+        mesh=MeshLayerState(
+            path=Path(portable_relative(MESH_PATH, recipe_directory)),
+        ),
         active_layer_id=tracts[0].id,
         canvas=CanvasState(
             width=1400,
@@ -75,7 +86,7 @@ def main() -> None:
         tract_payload["path"] = portable_relative(tractogram, recipe_directory)
 
     RECIPE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    RECIPE_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    RECIPE_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Demo recipe ready: {RECIPE_PATH}")
 
 

@@ -57,3 +57,31 @@ jobs:
       - name: Unit and rendering tests on macOS
         if: runner.os == 'macOS'
         run: ${{ matrix.python }} -m pytest -m "not integration"
+
+  integration:
+    name: Integration rendering on Linux
+    runs-on: ubuntu-latest
+
+    env:
+      PYVISTA_OFF_SCREEN: "true"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.0"
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install project
+        run: uv sync --frozen --all-extras
+
+      - name: Install Linux rendering libraries
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libopengl0 xvfb
+
+      - name: Live rendering tests
+        run: xvfb-run -a .venv/bin/python -m pytest -m integration

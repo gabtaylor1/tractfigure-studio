@@ -207,6 +207,16 @@ Git (on purpose).
 
 ## 6. Launch the validated starter scene
 
+The fastest path: launch with no arguments to open the bundled quickstart
+scene (all data is committed in `demo_data/dsi/`; open data in the browser or
+pass your own files as flags):
+
+```bash
+tractfigure-gui
+```
+
+To run the validated five-bundle starter scene instead:
+
 ```bash
 python -m tractfigure.gui.app_trame_v1_20260730 \
   --recipe examples/recipes/five_bundle_trame_v1_20260730.json \

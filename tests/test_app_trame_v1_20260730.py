@@ -93,6 +93,7 @@ class FakeRenderer:
         tract.color = color
         tract.opacity = opacity
 
+
     def set_line_width(self, layer_id: str, width: float) -> None:
         self.scene.tract_by_id(layer_id).line_width = width
 
@@ -206,6 +207,20 @@ def test_cli_recipe_and_color_helpers(tmp_path: Path) -> None:
     color, opacity = split_color_and_alpha("#11223380")
     assert color == "#112233"
     assert opacity is not None and abs(opacity - 128 / 255) < 1e-9
+
+
+def test_launch_without_arguments_loads_bundled_demo() -> None:
+    scene = scene_from_cli(
+        SimpleNamespace(recipe=None, reference=None, tractogram=[], mesh=None)
+    )
+
+    assert scene.image.path.name == "mni152.nii.gz"
+    assert scene.mesh is not None
+    assert scene.tracts
+    # A fresh clone has no demo_data/cache, so the default scene must
+    # reference only files that ship in the repository.
+    for path in [scene.image.path, scene.mesh.path, *(tract.path for tract in scene.tracts)]:
+        assert "cache" not in path.parts
 
 
 def test_load_recipe_resolves_portable_relative_paths(tmp_path: Path) -> None:
@@ -568,3 +583,32 @@ def test_mesh_lighting_controls_are_inert_without_a_glass_brain(tmp_path: Path) 
 
     assert controller.scene.lighting.mesh.preset == "default"
     assert renderer.lighting_calls == []
+
+
+
+def test_seventy_layer_scene_stays_navigable_with_scoped_edits(tmp_path: Path) -> None:
+    tract_count = 72
+    reference = tmp_path / "reference.nii.gz"
+    paths = [tmp_path / f"bundle-{index}.trk" for index in range(tract_count)]
+    scene = make_scene(reference, paths)
+    renderer = FakeRenderer(scene)
+    controller = TractFigureController(
+        FakeServer(),
+        renderer,
+        tmp_path / "outputs",
+    )
+
+    assert len(controller.state.layer_items) == tract_count
+
+    controller.toggle_layer_visibility("tract-7")
+    visible_flags = [tract.visible for tract in controller.scene.tracts]
+    assert visible_flags.count(False) == 1
+    assert not controller.scene.tract_by_id("tract-7").visible
+
+    controller.toggle_layer_link("tract-40")
+    controller.toggle_layer_link("tract-41")
+    controller.state.active_layer_id = "tract-40"
+    controller._on_active_color(active_color="#AABBCC")
+
+    changed = {tract.id for tract in controller.scene.tracts if tract.color == "#AABBCC"}
+    assert changed == {"tract-40", "tract-41"}

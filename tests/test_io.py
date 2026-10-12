@@ -3,12 +3,15 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import pytest
+from dipy.io.stateful_tractogram import Space, StatefulTractogram
+from dipy.io.streamline import save_tractogram
 from nibabel.affines import apply_affine
 from scipy.io import savemat
 
 from tractfigure.io import (
     detect_source_coordinates,
     load_tinytrack,
+    load_tract_layer,
     point_fraction_inside_reference,
     reference_world_bounds,
     source_to_rasmm_affine,
@@ -126,3 +129,40 @@ def test_load_tinytrack_decodes_deltas_and_affine(tmp_path: Path) -> None:
     (streamline,) = load_tinytrack(path)
     expected = np.array([[9.0, 22.0, 33.0], [8.0, 22.0, 33.0], [8.0, 21.0, 33.0]])
     np.testing.assert_allclose(streamline, expected)
+
+
+def test_load_tract_layer_reads_trk_with_keyword_dipy_space(tmp_path: Path) -> None:
+    # dipy >= 1.12 makes to_space keyword-only; a positional reference in the
+    # to_space slot breaks every .trk load (issue #12).
+    affine = np.array(
+        [
+            [2.0, 0.0, 0.0, -35.0],
+            [0.0, 2.0, 0.0, -45.0],
+            [0.0, 0.0, 2.0, -50.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+    data = np.zeros((30, 40, 45), dtype=np.float32)
+    data[10:20, 10:20, 15:25] = 1.0
+    reference_image = nib.Nifti1Image(data, affine)
+    reference = tmp_path / "reference.nii.gz"
+    nib.save(reference_image, reference)
+
+    streamlines = [
+        np.array([[-5.0, 0.0, 5.0], [-3.0, 2.0, 7.0], [-1.0, 4.0, 9.0]], dtype=np.float32),
+        np.array([[-7.0, -2.0, 3.0], [-6.0, -1.0, 4.0], [-5.0, 0.0, 5.0]], dtype=np.float32),
+    ]
+    bundle = tmp_path / "bundle.trk"
+    save_tractogram(
+        StatefulTractogram(streamlines, reference_image, Space.RASMM),
+        bundle,
+    )
+
+    layer = load_tract_layer(bundle, reference)
+
+    assert layer.inspection.coordinate_detection == "embedded format metadata"
+    assert len(layer.streamlines) == 2
+    assert np.allclose(layer.streamlines[0], streamlines[0])
+    assert np.allclose(layer.streamlines[1], streamlines[1])
+    assert layer.inspection.point_fraction_inside_reference == pytest.approx(1.0)
+    assert layer.inspection.warnings == ()

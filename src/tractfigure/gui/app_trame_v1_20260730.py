@@ -66,6 +66,12 @@ ANATOMICAL_PRIMARY_SIDES = {
 SURFACE_MORPH_STEP_MM = 1
 SURFACE_MORPH_LIMIT_MM = 10
 
+# Bundled scene used when the app is launched with no data arguments; its
+# inputs ship in git under demo_data/dsi, so no download step is needed.
+DEFAULT_DEMO_RECIPE = (
+    Path(__file__).resolve().parents[3] / "examples" / "recipes" / "quickstart.json"
+)
+
 ANATOMICAL_OPPOSITE_SIDES = {
     "left": "right",
     "right": "left",
@@ -1624,6 +1630,7 @@ class TractFigureController:
         self._synchronize_camera_to_view()
         self.state.status_message = "Perspective view"
 
+
     def show_all_layers(self) -> None:
         self.state.all_tracts_visible = True
         self.state.status_message = "All tracts shown"
@@ -2197,14 +2204,6 @@ def build_ui(
                             classes="ma-0 pa-1 align-center",
                             no_gutters=True,
                         ):
-                            with v3.VCol(cols="auto", classes="pa-0 pr-1"):
-                                v3.VCheckbox(
-                                    model_value=("item.linked",),
-                                    hide_details=True,
-                                    density="compact",
-                                    click=(ctrl.toggle_layer_link, "[item.id]"),
-                                )
-
                             with v3.VCol(cols="auto", classes="pa-0"):
                                 v3.VSwitch(
                                     model_value=("item.visible",),
@@ -2398,6 +2397,7 @@ def build_ui(
                             v_if=" && ".join(conditions),
                         )
 
+
                 v3.VDivider(classes="my-3")
                 v3.VCardTitle("Scene settings")
 
@@ -2543,6 +2543,9 @@ def scene_from_cli(args: Any) -> SceneState:
             raise ValueError("--recipe cannot be combined with --reference, --tractogram or --mesh")
 
         return load_recipe(args.recipe)
+
+    if args.reference is None and not args.tractogram and args.mesh is None:
+        return load_recipe(DEFAULT_DEMO_RECIPE)
 
     if args.reference is None:
         raise ValueError("--reference is required when --recipe is absent")

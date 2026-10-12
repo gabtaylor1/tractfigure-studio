@@ -89,6 +89,7 @@ def main() -> None:
     INVENTORY_PATH.write_text(
         json.dumps(inventory, indent=2) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
     print(
