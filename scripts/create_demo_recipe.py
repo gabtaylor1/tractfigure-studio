@@ -60,7 +60,7 @@ def main() -> None:
     ]
     scene = SceneState(
         image=ImageLayerState(
-            path=Path(os.path.relpath(reference, recipe_directory)),
+            path=Path(portable_relative(reference, recipe_directory)),
             opacity=1.0,
         ),
         tracts=tracts,
