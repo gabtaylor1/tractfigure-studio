@@ -98,6 +98,42 @@ LIGHT_RIGS: dict[str, tuple[tuple[tuple[float, float, float], float, float], ...
 
 LIGHTING_PRESETS = ("default", *LIGHT_RIGS)
 
+# trame's scene sync forwards only actor properties to the vtk.js client, so
+# client-side ("local") rendering cannot see the per-actor shader rigs. Each
+# rig therefore also maps onto the property knobs both renderers consume.
+# Gains are (ambient, diffuse, specular, specular power); the server-side
+# shader still overrides them pixel-for-pixel in remote mode.
+RIG_PROPERTY_GAINS: dict[str, tuple[float, float, float, float]] = {
+    "flat": (1.0, 0.0, 0.0, 1.0),
+    "headlight": (1.0, 1.0, 1.0, SPECULAR_EXPONENT),
+    "three_point": (1.0, 1.0, 1.0, SPECULAR_EXPONENT),
+    # Darker body, sharper wider highlight: the local stand-in for rim lights.
+    "rim": (0.4, 0.7, 1.6, 64.0),
+    # Raised ambient, near-matte: the local stand-in for the broad soft pair.
+    "soft": (1.6, 0.9, 0.2, 16.0),
+}
+
+
+def _clamp_unit(value: float) -> float:
+    return min(max(float(value), 0.0), 1.0)
+
+
+def rig_actor_properties(lighting: LightingState) -> tuple[float, float, float, float]:
+    """The per-actor (ambient, diffuse, specular, power) standing in for a rig."""
+
+    ambient_gain, diffuse_gain, specular_gain, power = RIG_PROPERTY_GAINS[lighting.preset]
+
+    if lighting.preset == "flat":
+        # Unlit: the gain reads through ambient, as the shader ignores its sliders.
+        return _clamp_unit(lighting.intensity), 0.0, 0.0, power
+
+    return (
+        _clamp_unit(lighting.ambient * ambient_gain),
+        _clamp_unit(lighting.intensity * diffuse_gain),
+        _clamp_unit(lighting.specular * specular_gain),
+        power,
+    )
+
 
 def _normalized_direction(
     direction: tuple[float, float, float],
@@ -243,6 +279,7 @@ class SceneRenderer:
         self.actors_by_id: dict[str, pv.Actor] = {}
         self.image_actors: dict[str, pv.Actor] = {}
         self.mesh_actor: pv.Actor | None = None
+        self._lighting_property_defaults: dict[str, tuple[float, float, float, float]] = {}
 
     def _require_scene(self) -> SceneState:
         if self.scene is None:
@@ -265,6 +302,7 @@ class SceneRenderer:
         self.actors_by_id.clear()
         self.image_actors.clear()
         self.mesh_actor = None
+        self._lighting_property_defaults.clear()
 
     def load_scene(self, scene: SceneState) -> SceneState:
         self.clear()
@@ -386,6 +424,29 @@ class SceneRenderer:
         self._refresh()
         return scene.mesh
 
+    def _sync_lighting_properties(self, actor: pv.Actor, lighting: LightingState) -> None:
+        """Mirror a rig onto the actor properties that trame syncs to the vtk.js client.
+
+        Remote rendering overrides these per-pixel via the shader rig; local
+        rendering has no shader replacements, so the properties are what make
+        the lighting controls visible there.
+        """
+
+        prop = actor.GetProperty()
+        name = f"actor-{id(actor)}"
+
+        defaults = self._lighting_property_defaults.setdefault(
+            name,
+            (prop.GetAmbient(), prop.GetDiffuse(), prop.GetSpecular(), prop.GetSpecularPower()),
+        )
+
+        values = defaults if lighting.preset == "default" else rig_actor_properties(lighting)
+
+        prop.SetAmbient(values[0])
+        prop.SetDiffuse(values[1])
+        prop.SetSpecular(values[2])
+        prop.SetSpecularPower(values[3])
+
     def _apply_mesh_shader(self, shader: str) -> None:
         """Install the glass brain's fragment shader: outline silhouette, lighting rig, or both."""
 
@@ -398,6 +459,8 @@ class SceneRenderer:
 
         if source is not None:
             shader_property.AddFragmentShaderReplacement("//VTK::Light::Impl", False, source, False)
+
+        self._sync_lighting_properties(self.mesh_actor, lighting)
 
     def set_mesh_shader(self, shader: str) -> None:
         mesh = self._require_scene().mesh
@@ -412,7 +475,8 @@ class SceneRenderer:
     def _apply_tract_lighting(self, actor: pv.Actor | None = None) -> None:
         """Install the tract lighting rig on one tract actor, or on all of them."""
 
-        source = lighting_fragment_shader(self._tract_lighting())
+        lighting = self._tract_lighting()
+        source = lighting_fragment_shader(lighting)
         actors = self.actors_by_id.values() if actor is None else (actor,)
 
         for target in actors:
@@ -423,6 +487,8 @@ class SceneRenderer:
                 shader_property.AddFragmentShaderReplacement(
                     "//VTK::Light::Impl", False, source, False
                 )
+
+            self._sync_lighting_properties(target, lighting)
 
     def set_mesh_lighting(
         self,
