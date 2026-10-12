@@ -2493,7 +2493,9 @@ def build_ui(
             ):
                 view = plotter_ui(
                     controller.renderer.plotter,
-                    mode="trame",
+                    # Server-only view: the trame mode exposes a local WebGL
+                    # fallback that renders unreliably on driverless displays.
+                    mode="server",
                     default_server_rendering=True,
                     collapse_menu=False,
                     add_menu=True,
