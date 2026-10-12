@@ -401,3 +401,89 @@ def test_lighting_survives_save_and_reset(tmp_path: Path) -> None:
         )
     finally:
         renderer.close()
+
+
+def test_lighting_drives_actor_properties_for_local_viewers(tmp_path: Path) -> None:
+    # trame's scene sync forwards actor properties - and only those - to the
+    # vtk.js client, so client-side rendering can never see the server-side
+    # shader rigs. Every lighting change must therefore also land on the
+    # per-actor properties that both rendering modes consume.
+    reference, _affine = make_reference(tmp_path)
+    mesh_path = write_tetrahedron_gifti(tmp_path / "brain.gii")
+
+    scene = make_scene(reference)
+    scene.mesh = MeshLayerState(path=mesh_path)
+    renderer = SceneRenderer(
+        pv.Plotter(off_screen=True, window_size=(320, 240)),
+        layer_loader=lambda path, reference_path=None, *, name=None: FakeLayer(
+            (np.array([[0, 0, 0], [5, 5, 5]], dtype=np.float32),)
+        ),
+    )
+
+    try:
+        scene = renderer.load_scene(scene)
+        baseline = [
+            (
+                actor.GetProperty().GetAmbient(),
+                actor.GetProperty().GetDiffuse(),
+                actor.GetProperty().GetSpecular(),
+                actor.GetProperty().GetSpecularPower(),
+            )
+            for actor in renderer.actors_by_id.values()
+        ]
+        mesh_baseline = (
+            renderer.mesh_actor.GetProperty().GetAmbient(),
+            renderer.mesh_actor.GetProperty().GetDiffuse(),
+            renderer.mesh_actor.GetProperty().GetSpecular(),
+            renderer.mesh_actor.GetProperty().GetSpecularPower(),
+        )
+
+        renderer.set_tract_lighting(preset="flat")
+        for actor in renderer.actors_by_id.values():
+            prop = actor.GetProperty()
+            assert prop.GetAmbient() == pytest.approx(1.0)
+            assert prop.GetDiffuse() == pytest.approx(0.0)
+            assert prop.GetSpecular() == pytest.approx(0.0)
+
+        renderer.set_tract_lighting(preset="headlight", ambient=0.25, specular=0.5)
+        for actor in renderer.actors_by_id.values():
+            prop = actor.GetProperty()
+            assert prop.GetAmbient() == pytest.approx(0.25)
+            assert prop.GetDiffuse() == pytest.approx(1.0)
+            assert prop.GetSpecular() == pytest.approx(0.5)
+
+        # Tract lighting must not touch the glass brain.
+        mesh_prop = renderer.mesh_actor.GetProperty()
+        assert (
+            mesh_prop.GetAmbient(),
+            mesh_prop.GetDiffuse(),
+            mesh_prop.GetSpecular(),
+            mesh_prop.GetSpecularPower(),
+        ) == mesh_baseline
+
+        renderer.set_mesh_lighting(preset="flat", intensity=0.8)
+        mesh_prop = renderer.mesh_actor.GetProperty()
+        assert mesh_prop.GetAmbient() == pytest.approx(0.8)
+        assert mesh_prop.GetDiffuse() == pytest.approx(0.0)
+
+        renderer.set_tract_lighting(preset="default")
+        assert [
+            (
+                actor.GetProperty().GetAmbient(),
+                actor.GetProperty().GetDiffuse(),
+                actor.GetProperty().GetSpecular(),
+                actor.GetProperty().GetSpecularPower(),
+            )
+            for actor in renderer.actors_by_id.values()
+        ] == baseline
+
+        renderer.set_mesh_lighting(preset="default")
+        mesh_prop = renderer.mesh_actor.GetProperty()
+        assert (
+            mesh_prop.GetAmbient(),
+            mesh_prop.GetDiffuse(),
+            mesh_prop.GetSpecular(),
+            mesh_prop.GetSpecularPower(),
+        ) == mesh_baseline
+    finally:
+        renderer.close()
