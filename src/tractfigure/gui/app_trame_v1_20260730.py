@@ -2204,14 +2204,6 @@ def build_ui(
                             classes="ma-0 pa-1 align-center",
                             no_gutters=True,
                         ):
-                            with v3.VCol(cols="auto", classes="pa-0 pr-1"):
-                                v3.VCheckbox(
-                                    model_value=("item.linked",),
-                                    hide_details=True,
-                                    density="compact",
-                                    click=(ctrl.toggle_layer_link, "[item.id]"),
-                                )
-
                             with v3.VCol(cols="auto", classes="pa-0"):
                                 v3.VSwitch(
                                     model_value=("item.visible",),
