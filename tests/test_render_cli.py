@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import nibabel as nib
@@ -120,10 +121,19 @@ def test_render_cli_repeated_runs_are_identical(recipe_setup, tmp_path) -> None:
 
 
 def test_render_cli_exposes_console_entry_point() -> None:
-    script = Path(__file__).resolve().parents[1] / "pyproject.toml"
-    assert "tractfigure-render" in script.read_text(encoding="utf-8")
+    from importlib.metadata import entry_points
+
+    scripts = {entry.name: entry for entry in entry_points(group="console_scripts")}
+    assert "tractfigure-render" in scripts
+
+    target = scripts["tractfigure-render"].load()
+    assert callable(target)
+
+
+def test_render_cli_module_runs_as_a_script(recipe_setup) -> None:
+    recipe, _root = recipe_setup
     completed = subprocess.run(
-        ["tractfigure-render", "--help"],
+        [sys.executable, "-m", "tractfigure.render_cli", "--help"],
         capture_output=True,
         text=True,
         check=False,
